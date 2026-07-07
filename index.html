@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Photo Editor XP</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; min-height: 100%;
+    font-family: Tahoma, Verdana, Arial, sans-serif;
+    font-size: 11px;
+    user-select: none;
+  }
+
+  /* ---------- DESKTOP ---------- */
+  #desktop {
+    position: relative;
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at 15% 12%, #fff9c4 0px, #ffe98a 40px, rgba(255,233,138,0) 90px),
+      linear-gradient(to bottom, #3a6ea5 0%, #5b93c9 18%, #86b8e0 38%, #bfe0f0 55%, #cdeab0 58%, #7ec850 72%, #4a9c2e 100%);
+    width: 100%;
+  }
+  #desktop::before{
+    content:""; position:absolute; left:0; right:0; bottom:30px; height:30%;
+    background: radial-gradient(ellipse at 30% 100%, #8fd35c 0%, #5fae3a 60%, #3f8a26 100%);
+    border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+    transform: scaleX(1.6);
+  }
+
+  /* desktop icons */
+  .dicon{
+    position:absolute; width:64px; text-align:center; color:#fff;
+    text-shadow: 1px 1px 2px rgba(0,0,0,.8); font-size:11px; line-height:1.2;
+    cursor:pointer;
+  }
+  .dicon .glyph{
+    width:40px; height:40px; margin:0 auto 4px; border-radius:6px;
+    display:flex; align-items:center; justify-content:center; font-size:22px;
+    background: linear-gradient(180deg,#eef6ff,#bcd7f5);
+    border:1px solid #5a86b5; box-shadow: inset 0 0 0 1px #fff;
+  }
+
+  /* ---------- WINDOW ---------- */
+  #app-window {
+    position: relative;
+    margin: 24px auto;
+    width: calc(100% - 32px);
+    max-width: 1180px;
+    background: #ece9d8;
+    border: 1px solid #0831d9;
+    border-radius: 8px 8px 3px 3px;
+    box-shadow: 3px 3px 12px rgba(0,0,0,.5);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .titlebar{
+    height: 30px; flex: 0 0 auto;
+    background: linear-gradient(180deg,#2a6fdb 0%, #1c4fd0 6%, #1747c9 50%, #1543c4 60%, #0c3ab0 100%);
+    border-radius: 7px 7px 0 0;
+    display:flex; align-items:center; padding: 2px 3px 2px 6px;
+    color:#fff; font-weight:bold; font-size:12.5px;
+    text-shadow: 1px 1px 1px rgba(0,0,0,.4);
+  }
+  .titlebar .ticon{
+    width:16px;height:16px;margin-right:5px; display:inline-block;
+    background: linear-gradient(135deg,#ffd54a,#ff8a3d);
+    border-radius:3px;
+  }
+  .titlebar .tspacer{flex:1}
+  .tbtn{
+    width:21px;height:19px;margin-left:2px;border-radius:3px;
+    background: linear-gradient(180deg,#5f9df7,#1c53d6);
+    border:1px solid #0c2f9e; color:#fff; font-size:11px; font-weight:bold;
+    display:flex;align-items:center;justify-content:center; cursor:pointer;
+  }
+  .tbtn.close{ background: linear-gradient(180deg,#f79a8f,#d92f1f); border-color:#8f1207;}
+
+  .menubar{
+    flex: 0 0 auto; background:#ece9d8; border-bottom:1px solid #b8b391;
+    display:flex; padding: 2px 4px; gap: 2px; position:relative; z-index:20;
+  }
+  .menuitem{
+    padding:3px 8px; border-radius:3px; cursor:default; position:relative;
+  }
+  .menuitem:hover, .menuitem.open{ background:#2a6fdb; color:#fff; }
+  .dropdown{
+    display:none; position:absolute; top:100%; left:0; min-width:190px;
+    background:#ece9d8; border:1px solid #6d6a55; box-shadow: 3px 3px 8px rgba(0,0,0,.4);
+    padding:2px; z-index:30; color:#111;
+  }
+  .menuitem.open .dropdown{ display:block; }
+  .ddi{
+    padding:5px 10px 5px 26px; border-radius:2px; white-space:nowrap; position:relative;
+  }
+  .ddi:hover{ background:#2a6fdb; color:#fff; }
+  .ddi.disabled{ color:#9a9887; cursor:default; }
+  .ddi.disabled:hover{ background:none; color:#9a9887; }
+  .ddi .chk{ position:absolute; left:8px; }
+  .ddsep{ height:1px; background:#c9c6b3; margin:3px 4px; }
+
+  /* ---------- XP message box ---------- */
+  #mbOverlay{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:200;
+    align-items:center; justify-content:center;
+  }
+  #mbOverlay.open{ display:flex; }
+  .mbwin{
+    width:320px; background:#ece9d8; border:1px solid #0831d9; border-radius:7px 7px 3px 3px;
+    box-shadow: 3px 3px 14px rgba(0,0,0,.6); overflow:hidden;
+  }
+  .mbwin .titlebar{ border-radius:6px 6px 0 0; }
+  .mbbody{ padding:16px 14px; display:flex; gap:12px; align-items:flex-start; }
+  .mbbody .micon{
+    width:34px; height:34px; flex:0 0 auto; border-radius:50%;
+    background: linear-gradient(180deg,#5fa9ff,#1c53d6); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:bold;
+  }
+  .mbbody .mtext{ font-size:11.5px; line-height:1.5; color:#111; }
+  .mbfoot{ padding:10px 14px 14px; text-align:center; }
+  .mbfoot .xpbtn{ min-width:75px; justify-content:center; }
+
+  .toolbar{
+    flex: 0 0 auto; background:#ece9d8; border-bottom:1px solid #b8b391;
+    display:flex; align-items:center; gap:4px; padding:4px 6px; flex-wrap: wrap;
+  }
+  .xpbtn{
+    background: linear-gradient(180deg,#fefefe,#ecebe4 45%,#d8d6c8 46%,#eceade);
+    border: 1px solid #8f8b76; border-radius: 3px;
+    padding: 4px 9px; cursor: pointer; font-size:11px; color:#111;
+    display:flex; align-items:center; gap:5px; white-space:nowrap;
+  }
+  .xpbtn:active{ background: linear-gradient(180deg,#c9c7b8,#dedcd0); }
+  .xpbtn.primary{
+    background: linear-gradient(180deg,#fff6d8,#ffe28a 45%,#f8c250 46%,#ffe9a8);
+    border-color:#a9791f;
+  }
+  .xpbtn:disabled{ opacity:.45; cursor:default; }
+  .sep{ width:1px; align-self:stretch; background:#b8b391; margin:2px 3px; }
+
+  .workspace{
+    display:flex; align-items:flex-start;
+  }
+
+  .panel{
+    width: 236px; flex: 0 0 auto; background:#ece9d8;
+    border-right: 1px solid #b8b391;
+    padding:8px;
+  }
+  .panel.right{ border-right:none; border-left:1px solid #b8b391; }
+  .groupbox{
+    border:1px solid #a2a08c; border-radius:4px; margin-bottom:10px; padding:8px 6px 8px;
+    position:relative; background:#f3f1e6;
+  }
+  .groupbox > .lbl{
+    position:absolute; top:-8px; left:8px; background:#ece9d8; padding:0 4px;
+    font-weight:bold; color:#1747c9; font-size:11px;
+  }
+  .row{ display:flex; gap:5px; flex-wrap:wrap; margin-top:4px; }
+
+  .ratiobtn, .filterbtn{
+    flex: 1 1 30%;
+    background: linear-gradient(180deg,#ffffff,#e7e5d8);
+    border:1px solid #9a9782; border-radius:3px; padding:5px 2px;
+    text-align:center; cursor:pointer; font-size:10.5px; color:#222;
+  }
+  .ratiobtn.active, .filterbtn.active{
+    background: linear-gradient(180deg,#bcd4ff,#7fa8ee);
+    border-color:#3a63c9; color:#04246b; font-weight:bold;
+  }
+  .filterbtn{ flex: 1 1 45%; padding:8px 3px; }
+  .filterbtn .fswatch{
+    height:34px; border-radius:2px; margin-bottom:4px;
+    border:1px solid rgba(0,0,0,.25);
+  }
+
+  .sliderow{ margin-top:8px; font-size:10.5px; }
+  .sliderow div.lab{ display:flex; justify-content:space-between; margin-bottom:2px;}
+  .sliderow input[type=range]{ width:100%; }
+
+  .canvas-area{
+    flex:1 1 300px; background:#5b7a99;
+    background-image:
+      linear-gradient(45deg,#4c6a86 25%, transparent 25%),
+      linear-gradient(-45deg,#4c6a86 25%, transparent 25%),
+      linear-gradient(45deg,transparent 75%,#4c6a86 75%),
+      linear-gradient(-45deg,transparent 75%,#4c6a86 75%);
+    background-size:20px 20px;
+    background-position:0 0,0 10px,10px -10px,-10px 0px;
+    display:flex; align-items:center; justify-content:center;
+    position:relative; min-width:0; padding: 14px;
+  }
+  #canvasWrap{
+    position:relative; box-shadow: 0 0 0 1px #24344a, 3px 3px 10px rgba(0,0,0,.5);
+    background:#000;
+    max-width:100%;
+  }
+  #mainCanvas{ display:block; touch-action:none; }
+
+  #placeholder{
+    color:#e8eef7; text-align:center; font-size:13px; padding: 30px;
+  }
+  #placeholder .big{ font-size:15px; font-weight:bold; margin-bottom:6px;}
+  #placeholder .xpbtn{ display:inline-flex; margin-top:12px; }
+
+  #cropBox{
+    position:absolute; border:1px dashed #fff; box-shadow: 0 0 0 2000px rgba(0,0,0,.45);
+    display:none; touch-action:none;
+  }
+  #cropBox .handle{
+    position:absolute; width:14px; height:14px; background:#1747c9; border:1px solid #fff;
+    border-radius:2px;
+  }
+  #cropBox .h-nw{ top:-7px;left:-7px; cursor:nwse-resize;}
+  #cropBox .h-ne{ top:-7px;right:-7px; cursor:nesw-resize;}
+  #cropBox .h-sw{ bottom:-7px;left:-7px; cursor:nesw-resize;}
+  #cropBox .h-se{ bottom:-7px;right:-7px; cursor:nwse-resize;}
+  #cropBox .h-move{ position:absolute; inset:0; cursor:move; }
+
+  .statusbar{
+    flex:0 0 auto; height:22px; background:#ece9d8; border-top:1px solid #fff;
+    display:flex; align-items:center; padding:0 8px; font-size:10.5px; color:#333;
+    box-shadow: inset 0 1px 0 #b8b391;
+  }
+  .statusbar .segment{ border-left:1px solid #b8b391; padding-left:8px; margin-left:8px; }
+
+  /* ---------- TASKBAR ---------- */
+  #taskbar{
+    position: relative; width:100%; height:40px;
+    background: linear-gradient(180deg,#2a72e0,#1a52c8 8%, #1442ad 92%,#0e2f85);
+    display:flex; align-items:center; box-shadow: 0 -1px 0 #0a2266;
+    z-index: 50;
+  }
+  #startbtn{
+    height:32px; margin:0 4px; padding:0 14px 0 8px; border-radius:6px;
+    background: linear-gradient(180deg,#6fcf4a,#3a9c1e 45%,#2f8a17 55%,#4cb32a);
+    color:#fff; font-weight:bold; font-style:italic; font-size:14px;
+    display:flex; align-items:center; gap:6px; box-shadow: 0 0 0 1px #1c5b0c;
+    text-shadow: 1px 1px 1px rgba(0,0,0,.4);
+  }
+  #startbtn .worb{
+    width:20px;height:20px;border-radius:3px;
+    background: conic-gradient(#f35325 0 90deg,#81bc06 90deg 180deg,#05a6f0 180deg 270deg,#ffba08 270deg 360deg);
+  }
+  .tasksep{ width:1px; align-self:stretch; margin:6px 2px; background:rgba(255,255,255,.25); }
+  .taskitem{
+    height:30px; margin:4px 3px; padding:0 10px; border-radius:3px;
+    background: linear-gradient(180deg,#4a86e0,#2c5fc9);
+    color:#fff; font-size:11px; display:flex; align-items:center; gap:6px;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.3);
+  }
+  #trayclock{
+    margin-left:auto; margin-right:8px; color:#fff; font-size:11px;
+    background: linear-gradient(180deg,#1747c9,#123ba8);
+    padding: 6px 10px; border-radius: 4px 0 0 4px; height:20px; display:flex; align-items:center;
+  }
+
+  #fileInput{ display:none; }
+
+  input[type=range]{ -webkit-appearance:none; height:14px; background:transparent; }
+  input[type=range]::-webkit-slider-runnable-track{
+    height:4px; background:#8a8768; border-radius:2px;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:13px; height:13px; margin-top:-5px;
+    background: linear-gradient(180deg,#fff,#c7c4b3); border:1px solid #6d6a55; border-radius:2px;
+  }
+
+  @media (max-width: 820px){
+    #app-window{ margin: 8px auto; width: calc(100% - 16px); }
+    .workspace{ flex-direction: column; }
+    .panel{ width:auto; border-right:none; border-bottom:1px solid #b8b391; }
+    .panel.right{ border-left:none; }
+    #startbtn span.label{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="desktop">
+  <div class="dicon" style="top:18px;left:16px;" onclick="document.getElementById('fileInput').click()">
+    <div class="glyph">🖼️</div>My Pictures
+  </div>
+  <div class="dicon" style="top:110px;left:16px;">
+    <div class="glyph">🗑️</div>Recycle Bin
+  </div>
+
+  <div id="app-window">
+    <div class="titlebar">
+      <div class="ticon"></div>
+      <span>Photo Editor.exe</span>
+      <div class="tspacer"></div>
+      <div class="tbtn">_</div>
+      <div class="tbtn">▢</div>
+      <div class="tbtn close" onclick="if(confirm('Close Photo Editor?')) resetAll(true)">✕</div>
+    </div>
+
+    <div class="menubar" id="menubar">
+      <div class="menuitem" data-menu="file">File<div class="dropdown" id="ddFile"></div></div>
+      <div class="menuitem" data-menu="edit">Edit<div class="dropdown" id="ddEdit"></div></div>
+      <div class="menuitem" data-menu="view">View<div class="dropdown" id="ddView"></div></div>
+      <div class="menuitem" data-menu="filters">Filters<div class="dropdown" id="ddFilters"></div></div>
+      <div class="menuitem" data-menu="help">Help<div class="dropdown" id="ddHelp"></div></div>
+    </div>
+
+    <div class="toolbar">
+      <div class="xpbtn primary" onclick="document.getElementById('fileInput').click()">📂 Open</div>
+      <input id="fileInput" type="file" accept="image/*">
+      <div class="xpbtn" id="saveBtn" onclick="saveImage()" disabled>💾 Save As...</div>
+      <div class="sep"></div>
+      <div class="xpbtn" id="cropStartBtn" onclick="startCrop()" disabled>✂ Crop</div>
+      <div class="xpbtn" id="cropApplyBtn" onclick="applyCrop()" style="display:none;">✔ Apply Crop</div>
+      <div class="xpbtn" id="cropCancelBtn" onclick="cancelCrop()" style="display:none;">✖ Cancel Crop</div>
+      <div class="sep"></div>
+      <div class="xpbtn" id="rotateBtn" onclick="rotateImage()" disabled>⟳ Rotate</div>
+      <div class="xpbtn" id="resetBtn" onclick="resetImage()" disabled>↺ Reset</div>
+    </div>
+
+    <div class="workspace">
+      <div class="panel">
+        <div class="groupbox">
+          <div class="lbl">Aspect Ratio</div>
+          <div class="row" id="ratioRow">
+            <div class="ratiobtn active" data-ratio="free">Free</div>
+            <div class="ratiobtn" data-ratio="1:1">1:1</div>
+            <div class="ratiobtn" data-ratio="4:3">4:3</div>
+            <div class="ratiobtn" data-ratio="16:9">16:9</div>
+            <div class="ratiobtn" data-ratio="3:2">3:2</div>
+            <div class="ratiobtn" data-ratio="9:16">9:16</div>
+          </div>
+        </div>
+
+        <div class="groupbox">
+          <div class="lbl">Adjustments</div>
+          <div class="sliderow">
+            <div class="lab"><span>Brightness</span><span id="valBrightness">100%</span></div>
+            <input type="range" id="rngBrightness" min="0" max="200" value="100">
+          </div>
+          <div class="sliderow">
+            <div class="lab"><span>Contrast</span><span id="valContrast">100%</span></div>
+            <input type="range" id="rngContrast" min="0" max="200" value="100">
+          </div>
+          <div class="sliderow">
+            <div class="lab"><span>Saturation</span><span id="valSaturate">100%</span></div>
+            <input type="range" id="rngSaturate" min="0" max="200" value="100">
+          </div>
+        </div>
+      </div>
+
+      <div class="canvas-area" id="canvasArea">
+        <div id="placeholder">
+          <div class="big">🖼️ No picture open</div>
+          <div>Click "Open" to import a photo from your files<br>or gallery to start editing.</div>
+          <div class="xpbtn primary" onclick="document.getElementById('fileInput').click()">📂 Open Picture...</div>
+        </div>
+        <div id="canvasWrap" style="display:none;">
+          <canvas id="mainCanvas"></canvas>
+          <div id="cropBox">
+            <div class="handle h-move"></div>
+            <div class="handle h-nw"></div>
+            <div class="handle h-ne"></div>
+            <div class="handle h-sw"></div>
+            <div class="handle h-se"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel right">
+        <div class="groupbox">
+          <div class="lbl">2000s Filters</div>
+          <div class="row" id="filterRow"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="statusbar">
+      <span id="statusMsg">Ready</span>
+      <span class="segment" id="statusDims"></span>
+      <span class="segment" id="statusFilter">Filter: None</span>
+    </div>
+  </div>
+</div>
+
+<div id="mbOverlay">
+  <div class="mbwin">
+    <div class="titlebar">
+      <div class="ticon"></div>
+      <span id="mbTitle">Photo Editor.exe</span>
+      <div class="tspacer"></div>
+      <div class="tbtn close" onclick="closeMessageBox()">✕</div>
+    </div>
+    <div class="mbbody">
+      <div class="micon" id="mbIcon">i</div>
+      <div class="mtext" id="mbText"></div>
+    </div>
+    <div class="mbfoot"><div class="xpbtn primary" onclick="closeMessageBox()">OK</div></div>
+  </div>
+</div>
+
+<div id="taskbar">
+  <div id="startbtn"><div class="worb"></div><span class="label">start</span></div>
+  <div class="tasksep"></div>
+  <div class="taskitem">🖼️ Photo Editor.exe</div>
+  <div id="trayclock">12:00 PM</div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------------- Clock ----------------
+  function tickClock(){
+    var d = new Date();
+    var h = d.getHours(); var ampm = h>=12?'PM':'AM'; h = h%12; if(h===0) h=12;
+    var m = d.getMinutes(); m = m<10?'0'+m:m;
+    document.getElementById('trayclock').textContent = h+':'+m+' '+ampm;
+  }
+  tickClock(); setInterval(tickClock,1000*15);
+
+  // ---------------- State ----------------
+  var sourceCanvas = document.createElement('canvas'); // holds current full working image (post-crop, pre-filter)
+  var srcCtx = sourceCanvas.getContext('2d');
+  var originalDataURL = null; // untouched original for full reset
+  var currentFilter = 'none';
+  var currentRatio = 'free';
+  var MAX_DIM = 1400;
+
+  var mainCanvas = document.getElementById('mainCanvas');
+  var mainCtx = mainCanvas.getContext('2d');
+  var canvasWrap = document.getElementById('canvasWrap');
+  var placeholder = document.getElementById('placeholder');
+  var fileInput = document.getElementById('fileInput');
+
+  var brightnessRange = document.getElementById('rngBrightness');
+  var contrastRange = document.getElementById('rngContrast');
+  var saturateRange = document.getElementById('rngSaturate');
+
+  function setStatus(msg){ document.getElementById('statusMsg').textContent = msg; }
+
+  function enableControls(on){
+    document.getElementById('saveBtn').disabled = !on;
+    document.getElementById('cropStartBtn').disabled = !on;
+    document.getElementById('rotateBtn').disabled = !on;
+    document.getElementById('resetBtn').disabled = !on;
+  }
+
+  // ---------------- Load image ----------------
+  fileInput.addEventListener('change', function(e){
+    var file = e.target.files && e.target.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      loadImageFromURL(ev.target.result, true);
+    };
+    reader.readAsDataURL(file);
+  });
+
+  function loadImageFromURL(url, isFresh){
+    var img = new Image();
+    img.onload = function(){
+      var w = img.naturalWidth, h = img.naturalHeight;
+      var scale = Math.min(1, MAX_DIM / Math.max(w,h));
+      w = Math.round(w*scale); h = Math.round(h*scale);
+      sourceCanvas.width = w; sourceCanvas.height = h;
+      srcCtx.clearRect(0,0,w,h);
+      srcCtx.drawImage(img,0,0,w,h);
+      if(isFresh){ originalDataURL = sourceCanvas.toDataURL('image/png'); }
+      placeholder.style.display = 'none';
+      canvasWrap.style.display = 'inline-block';
+      enableControls(true);
+      currentFilter = 'none';
+      setActiveFilterBtn('none');
+      brightnessRange.value = 100; contrastRange.value = 100; saturateRange.value = 100;
+      updateSliderLabels();
+      render();
+      setStatus('Picture loaded');
+      document.getElementById('statusDims').textContent = w+' x '+h+' px';
+    };
+    img.onerror = function(){ setStatus('Could not open that file'); };
+    img.src = url;
+  }
+
+  // ---------------- Filter definitions ----------------
+  var filters = [
+    {id:'none', name:'None', b:1, c:1, s:1, sepia:0, gray:0, invert:0, fx:null, sw:'linear-gradient(135deg,#ddd,#999)'},
+    {id:'sepia', name:'Sepia', b:1.02, c:1.05, s:1, sepia:0.75, gray:0, invert:0, fx:null, sw:'linear-gradient(135deg,#d9b98a,#5e3a1e)'},
+    {id:'bw', name:'B & W', b:1, c:1.1, s:1, sepia:0, gray:1, invert:0, fx:null, sw:'linear-gradient(135deg,#f2f2f2,#222)'},
+    {id:'vhs', name:'VHS Tape', b:1.02, c:1.15, s:0.75, sepia:0, gray:0, invert:0, fx:'vhs', sw:'linear-gradient(135deg,#2ee6e6,#ff2a6d)'},
+    {id:'colorburn', name:'Color Burn', b:1, c:1.3, s:1.6, sepia:0, gray:0, invert:0, fx:'colorburn', sw:'linear-gradient(135deg,#ff5b1f,#7a0d0d)'},
+    {id:'vintage', name:'Vintage Fade', b:1.05, c:0.9, s:0.75, sepia:0.35, gray:0, invert:0, fx:'vintage', sw:'linear-gradient(135deg,#e8d9b0,#8a7458)'},
+    {id:'cross', name:'Cross Process', b:1, c:1.25, s:1.4, sepia:0, gray:0, invert:0, fx:'cross', sw:'linear-gradient(135deg,#2fd4a0,#e8c400)'},
+    {id:'posterize', name:'Posterize', b:1, c:1.1, s:1.3, sepia:0, gray:0, invert:0, fx:'posterize', sw:'linear-gradient(135deg,#ff3d7f,#3d7fff)'},
+    {id:'negative', name:'Negative', b:1, c:1, s:1, sepia:0, gray:0, invert:1, fx:null, sw:'linear-gradient(135deg,#000,#fff)'},
+    {id:'vignette', name:'Vignette', b:1, c:1.05, s:1, sepia:0, gray:0, invert:0, fx:'vignette', sw:'radial-gradient(circle,#fff,#000)'},
+    {id:'grain', name:'Film Grain', b:1, c:1.05, s:0.95, sepia:0, gray:0, invert:0, fx:'grain', sw:'linear-gradient(135deg,#999,#555)'},
+    {id:'oldtv', name:'Old TV', b:0.95, c:1.15, s:1, sepia:0, gray:0.6, invert:0, fx:'oldtv', sw:'linear-gradient(135deg,#7cff7c,#0a3d0a)'},
+    {id:'duotone', name:'Duotone', b:1, c:1.1, s:1, sepia:0, gray:1, invert:0, fx:'duotone', sw:'linear-gradient(135deg,#0057ff,#ff7a00)'},
+    {id:'warm', name:'Warm Glow', b:1.05, c:1, s:1.3, sepia:0.2, gray:0, invert:0, fx:'tintwarm', sw:'linear-gradient(135deg,#ffcf7a,#ff7a3d)'},
+    {id:'cool', name:'Cool Blue', b:1, c:1, s:1.15, sepia:0, gray:0, invert:0, fx:'tintcool', sw:'linear-gradient(135deg,#7ac9ff,#1a3d7a)'}
+  ];
+
+  var filterRow = document.getElementById('filterRow');
+  filters.forEach(function(f){
+    var btn = document.createElement('div');
+    btn.className = 'filterbtn'; btn.dataset.filter = f.id;
+    btn.innerHTML = '<div class="fswatch" style="background:'+f.sw+'"></div>'+f.name;
+    btn.addEventListener('click', function(){
+      currentFilter = f.id;
+      setActiveFilterBtn(f.id);
+      document.getElementById('statusFilter').textContent = 'Filter: '+f.name;
+      render();
+    });
+    filterRow.appendChild(btn);
+  });
+  function setActiveFilterBtn(id){
+    Array.prototype.forEach.call(filterRow.children, function(el){
+      el.classList.toggle('active', el.dataset.filter === id);
+    });
+  }
+
+  function getFilterDef(id){
+    for(var i=0;i<filters.length;i++){ if(filters[i].id===id) return filters[i]; }
+    return filters[0];
+  }
+
+  // ---------------- Sliders ----------------
+  function updateSliderLabels(){
+    document.getElementById('valBrightness').textContent = brightnessRange.value+'%';
+    document.getElementById('valContrast').textContent = contrastRange.value+'%';
+    document.getElementById('valSaturate').textContent = saturateRange.value+'%';
+  }
+  [brightnessRange, contrastRange, saturateRange].forEach(function(r){
+    r.addEventListener('input', function(){ updateSliderLabels(); render(); });
+  });
+
+  // ---------------- Pixel effect helpers ----------------
+  function clamp(v){ return v<0?0:(v>255?255:v); }
+
+  function addNoise(imgData, amount){
+    var d = imgData.data;
+    for(var i=0;i<d.length;i+=4){
+      var n = (Math.random()-0.5)*amount;
+      d[i]=clamp(d[i]+n); d[i+1]=clamp(d[i+1]+n); d[i+2]=clamp(d[i+2]+n);
+    }
+  }
+
+  // Manual brightness/contrast/saturation/sepia/grayscale/invert — done as raw
+  // pixel math so it always works, regardless of ctx.filter browser support.
+  function applyAdjustments(imgData, o){
+    var d = imgData.data;
+    var br = o.brightness, ct = o.contrast, sa = o.saturate;
+    var sepiaAmt = o.sepia, grayAmt = o.grayscale, inv = o.invert;
+    for(var i=0;i<d.length;i+=4){
+      var r=d[i], g=d[i+1], b=d[i+2];
+      r*=br; g*=br; b*=br;
+      r=(r-128)*ct+128; g=(g-128)*ct+128; b=(b-128)*ct+128;
+      var lum = 0.299*r+0.587*g+0.114*b;
+      r = lum+(r-lum)*sa; g = lum+(g-lum)*sa; b = lum+(b-lum)*sa;
+      if(grayAmt>0){
+        var gy = 0.299*r+0.587*g+0.114*b;
+        r += (gy-r)*grayAmt; g += (gy-g)*grayAmt; b += (gy-b)*grayAmt;
+      }
+      if(sepiaAmt>0){
+        var sr = r*0.393+g*0.769+b*0.189;
+        var sg = r*0.349+g*0.686+b*0.168;
+        var sb = r*0.272+g*0.534+b*0.131;
+        r += (sr-r)*sepiaAmt; g += (sg-g)*sepiaAmt; b += (sb-b)*sepiaAmt;
+      }
+      if(inv){ r=255-r; g=255-g; b=255-b; }
+      d[i]=clamp(r); d[i+1]=clamp(g); d[i+2]=clamp(b);
+    }
+  }
+
+  function posterizeData(imgData, levels){
+    var step = 255/(levels-1);
+    var d = imgData.data;
+    for(var i=0;i<d.length;i+=4){
+      d[i]=clamp(Math.round(Math.round(d[i]/step)*step));
+      d[i+1]=clamp(Math.round(Math.round(d[i+1]/step)*step));
+      d[i+2]=clamp(Math.round(Math.round(d[i+2]/step)*step));
+    }
+  }
+
+  function drawScanlines(ctx,w,h,alpha){
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = '#000';
+    for(var y=0;y<h;y+=3){ ctx.fillRect(0,y,w,1); }
+    ctx.restore();
+  }
+
+  function drawVignette(ctx,w,h,strength){
+    var g = ctx.createRadialGradient(w/2,h/2, Math.min(w,h)*0.25, w/2,h/2, Math.max(w,h)*0.72);
+    g.addColorStop(0,'rgba(0,0,0,0)');
+    g.addColorStop(1,'rgba(0,0,0,'+strength+')');
+    ctx.save();
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,w,h);
+    ctx.restore();
+  }
+
+  function drawChromaShift(ctx, srcCanvas, w, h, shift){
+    // draw red channel shifted left, blue channel shifted right, screen-blended
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    ctx.globalAlpha = 0.55;
+
+    var tmp = document.createElement('canvas'); tmp.width=w; tmp.height=h;
+    var tctx = tmp.getContext('2d');
+    tctx.drawImage(srcCanvas,0,0,w,h);
+    var id = tctx.getImageData(0,0,w,h); var d = id.data;
+    for(var i=0;i<d.length;i+=4){ d[i+1]=0; d[i+2]=0; } // keep red only
+    tctx.putImageData(id,0,0);
+    ctx.drawImage(tmp, -shift, 0);
+
+    var tmp2 = document.createElement('canvas'); tmp2.width=w; tmp2.height=h;
+    var tctx2 = tmp2.getContext('2d');
+    tctx2.drawImage(srcCanvas,0,0,w,h);
+    var id2 = tctx2.getImageData(0,0,w,h); var d2 = id2.data;
+    for(var i=0;i<d2.length;i+=4){ d2[i]=0; d2[i+1]=0; } // keep blue only
+    tctx2.putImageData(id2,0,0);
+    ctx.drawImage(tmp2, shift, 0);
+
+    ctx.restore();
+  }
+
+  function drawDuotone(ctx,w,h, colorShadow, colorHighlight){
+    ctx.save();
+    var g = ctx.createLinearGradient(0,0,w,h);
+    g.addColorStop(0, colorShadow);
+    g.addColorStop(1, colorHighlight);
+    ctx.globalCompositeOperation = 'color';
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,w,h);
+    ctx.restore();
+  }
+
+  function drawTint(ctx,w,h,color,alpha,mode){
+    ctx.save();
+    ctx.globalCompositeOperation = mode || 'overlay';
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    ctx.fillRect(0,0,w,h);
+    ctx.restore();
+  }
+
+  // ---------------- Render pipeline ----------------
+  function render(){
+    var w = sourceCanvas.width, h = sourceCanvas.height;
+    if(!w || !h) return;
+    mainCanvas.width = w; mainCanvas.height = h;
+
+    var b = brightnessRange.value/100, c = contrastRange.value/100, s = saturateRange.value/100;
+    var def = getFilterDef(currentFilter);
+
+    mainCtx.clearRect(0,0,w,h);
+    mainCtx.drawImage(sourceCanvas,0,0,w,h);
+
+    var base = mainCtx.getImageData(0,0,w,h);
+    applyAdjustments(base, {
+      brightness: b*def.b, contrast: c*def.c, saturate: s*def.s,
+      sepia: def.sepia, grayscale: def.gray, invert: def.invert
+    });
+    mainCtx.putImageData(base,0,0);
+
+    switch(def.fx){
+      case 'vhs':
+        drawChromaShift(mainCtx, mainCanvas, w, h, Math.max(1,Math.round(w*0.004)));
+        (function(){
+          var id = mainCtx.getImageData(0,0,w,h);
+          addNoise(id, 18);
+          mainCtx.putImageData(id,0,0);
+        })();
+        drawScanlines(mainCtx,w,h,0.16);
+        drawVignette(mainCtx,w,h,0.35);
+        drawTint(mainCtx,w,h,'#1a1a2e',0.08,'overlay');
+        break;
+      case 'colorburn':
+        drawTint(mainCtx,w,h,'#ff4d1a',0.5,'color-burn');
+        drawVignette(mainCtx,w,h,0.25);
+        break;
+      case 'vintage':
+        drawVignette(mainCtx,w,h,0.3);
+        (function(){
+          var id = mainCtx.getImageData(0,0,w,h);
+          addNoise(id, 10);
+          mainCtx.putImageData(id,0,0);
+        })();
+        drawTint(mainCtx,w,h,'#7a5a2e',0.12,'soft-light');
+        break;
+      case 'cross':
+        drawTint(mainCtx,w,h,'#00c2a8',0.18,'overlay');
+        drawTint(mainCtx,w,h,'#ffdd55',0.12,'soft-light');
+        break;
+      case 'posterize':
+        (function(){
+          var id = mainCtx.getImageData(0,0,w,h);
+          posterizeData(id, 5);
+          mainCtx.putImageData(id,0,0);
+        })();
+        break;
+      case 'vignette':
+        drawVignette(mainCtx,w,h,0.55);
+        break;
+      case 'grain':
+        (function(){
+          var id = mainCtx.getImageData(0,0,w,h);
+          addNoise(id, 28);
+          mainCtx.putImageData(id,0,0);
+        })();
+        break;
+      case 'oldtv':
+        drawScanlines(mainCtx,w,h,0.22);
+        (function(){
+          var id = mainCtx.getImageData(0,0,w,h);
+          addNoise(id, 20);
+          mainCtx.putImageData(id,0,0);
+        })();
+        drawVignette(mainCtx,w,h,0.5);
+        drawTint(mainCtx,w,h,'#0aff5a',0.05,'overlay');
+        break;
+      case 'duotone':
+        drawDuotone(mainCtx,w,h,'#1030a0','#ff8c1a');
+        break;
+      case 'tintwarm':
+        drawTint(mainCtx,w,h,'#ff8a3d',0.14,'soft-light');
+        drawVignette(mainCtx,w,h,0.18);
+        break;
+      case 'tintcool':
+        drawTint(mainCtx,w,h,'#3d8aff',0.16,'soft-light');
+        break;
+      default: break;
+    }
+
+    document.getElementById('statusDims').textContent = w+' x '+h+' px';
+    fitCanvasDisplay();
+  }
+
+  // Sizes the on-screen canvas box to the image's *true* aspect ratio.
+  // The page scrolls vertically as needed, so this only ever fits to the
+  // available width — height is never a constraint, and height:auto keeps
+  // the aspect ratio exact (a 1:1 crop always displays as a real square).
+  var zoomMode = 'fit'; // 'fit' or a numeric scale like 1, 1.25, 0.5
+  function fitCanvasDisplay(){
+    var w = mainCanvas.width, h = mainCanvas.height;
+    if(!w || !h) return;
+    var scale;
+    if(zoomMode === 'fit'){
+      var area = document.getElementById('canvasArea');
+      var availW = Math.max(60, area.clientWidth - 32);
+      scale = Math.min(availW/w, 2.5);
+      scale = Math.max(0.05, scale);
+    } else {
+      scale = zoomMode;
+    }
+    mainCanvas.style.width = Math.round(w*scale)+'px';
+    mainCanvas.style.height = 'auto';
+  }
+  window.addEventListener('resize', function(){ if(zoomMode==='fit') fitCanvasDisplay(); });
+
+  // ---------------- Rotate / Reset ----------------
+  function rotateImage(){
+    var w = sourceCanvas.width, h = sourceCanvas.height;
+    var tmp = document.createElement('canvas'); tmp.width = h; tmp.height = w;
+    var tctx = tmp.getContext('2d');
+    tctx.translate(h/2, w/2);
+    tctx.rotate(Math.PI/2);
+    tctx.drawImage(sourceCanvas, -w/2, -h/2);
+    sourceCanvas.width = h; sourceCanvas.height = w;
+    srcCtx.clearRect(0,0,h,w);
+    srcCtx.drawImage(tmp,0,0);
+    render();
+    setStatus('Rotated 90°');
+  }
+
+  function resetImage(){
+    if(!originalDataURL) return;
+    loadImageFromURL(originalDataURL, false);
+    setStatus('Reset to original');
+  }
+
+  function resetAll(){
+    placeholder.style.display = '';
+    canvasWrap.style.display = 'none';
+    enableControls(false);
+    originalDataURL = null;
+    fileInput.value = '';
+    setStatus('Ready');
+    document.getElementById('statusDims').textContent = '';
+    document.getElementById('statusFilter').textContent = 'Filter: None';
+  }
+  window.resetAll = resetAll;
+  window.rotateImage = rotateImage;
+  window.resetImage = resetImage;
+
+  // ---------------- Save ----------------
+  function saveImage(){
+    if(!sourceCanvas.width){ setStatus('No picture to save'); return; }
+    render(); // make sure filters + slider adjustments are fully baked in first
+    var filename = 'photo-edit-' + Date.now() + '.png';
+
+    mainCanvas.toBlob(function(blob){
+      if(!blob){ setStatus('Could not create image file'); return; }
+
+      // Prefer the native share sheet — on phones this offers "Save to Photos" /
+      // "Save Image" directly to the camera roll, alongside Files/AirDrop/etc.
+      var canTryShare = !!(navigator.canShare && window.File);
+      if(canTryShare){
+        try{
+          var file = new File([blob], filename, {type:'image/png'});
+          if(navigator.canShare({files:[file]})){
+            navigator.share({files:[file], title:'Photo Edit'}).then(function(){
+              setStatus('Picture saved');
+            }).catch(function(err){
+              if(err && err.name === 'AbortError'){ setStatus('Save cancelled'); return; }
+              downloadBlob(blob, filename);
+            });
+            return;
+          }
+        }catch(e){ /* fall through to download */ }
+      }
+      downloadBlob(blob, filename);
+    }, 'image/png');
+  }
+
+  function downloadBlob(blob, filename){
+    var url = URL.createObjectURL(blob);
+    var supportsDownload = 'download' in document.createElement('a');
+    if(supportsDownload){
+      var link = document.createElement('a');
+      link.download = filename;
+      link.href = url;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setStatus('Picture saved — filters & adjustments included');
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
+    } else {
+      var w = window.open();
+      if(w){
+        w.document.write('<title>Press and hold to save</title><body style="margin:0;background:#111"><img src="'+url+'" style="max-width:100%;display:block;margin:auto;"></body>');
+        setStatus('Opened picture — press and hold the image to save it');
+      } else {
+        setStatus('Could not open save dialog — check pop-up blocker');
+      }
+    }
+  }
+  window.saveImage = saveImage;
+
+  // ---------------- Aspect ratio ----------------
+  var ratioRow = document.getElementById('ratioRow');
+  Array.prototype.forEach.call(ratioRow.children, function(el){
+    el.addEventListener('click', function(){
+      currentRatio = el.dataset.ratio;
+      Array.prototype.forEach.call(ratioRow.children, function(e2){ e2.classList.toggle('active', e2===el); });
+      if(cropActive) positionCropBoxForRatio();
+    });
+  });
+
+  function ratioValue(){
+    if(currentRatio === 'free') return null;
+    var parts = currentRatio.split(':');
+    return parseInt(parts[0],10)/parseInt(parts[1],10);
+  }
+
+  // ---------------- Crop ----------------
+  var cropActive = false;
+  var cropBox = document.getElementById('cropBox');
+  var cropRect = {x:0,y:0,w:0,h:0}; // in CSS px relative to canvas element
+
+  function startCrop(){
+    if(!sourceCanvas.width) return;
+    cropActive = true;
+    document.getElementById('cropStartBtn').style.display = 'none';
+    document.getElementById('cropApplyBtn').style.display = '';
+    document.getElementById('cropCancelBtn').style.display = '';
+    positionCropBoxForRatio();
+    cropBox.style.display = 'block';
+    setStatus('Drag to select crop area, then Apply Crop');
+  }
+
+  function cancelCrop(){
+    cropActive = false;
+    cropBox.style.display = 'none';
+    document.getElementById('cropStartBtn').style.display = '';
+    document.getElementById('cropApplyBtn').style.display = 'none';
+    document.getElementById('cropCancelBtn').style.display = 'none';
+    setStatus('Crop cancelled');
+  }
+  window.startCrop = startCrop;
+  window.cancelCrop = cancelCrop;
+
+  function positionCropBoxForRatio(){
+    var rect = mainCanvas.getBoundingClientRect();
+    var cw = rect.width, ch = rect.height;
+    var margin = Math.min(cw,ch) * 0.12;
+    var bw = cw - margin*2, bh = ch - margin*2;
+    var ar = ratioValue();
+    if(ar){
+      if(bw/bh > ar){ bw = bh*ar; } else { bh = bw/ar; }
+    }
+    cropRect.x = (cw-bw)/2; cropRect.y = (ch-bh)/2; cropRect.w = bw; cropRect.h = bh;
+    drawCropBox();
+  }
+
+  function drawCropBox(){
+    cropBox.style.left = cropRect.x+'px';
+    cropBox.style.top = cropRect.y+'px';
+    cropBox.style.width = cropRect.w+'px';
+    cropBox.style.height = cropRect.h+'px';
+  }
+
+  function applyCrop(){
+    var rect = mainCanvas.getBoundingClientRect();
+    var scaleX = mainCanvas.width / rect.width;
+    var scaleY = mainCanvas.height / rect.height;
+    var sx = Math.round(cropRect.x*scaleX), sy = Math.round(cropRect.y*scaleY);
+    var sw = Math.round(cropRect.w*scaleX), sh = Math.round(cropRect.h*scaleY);
+    sx = Math.max(0,sx); sy = Math.max(0,sy);
+    sw = Math.min(sw, sourceCanvas.width-sx); sh = Math.min(sh, sourceCanvas.height-sy);
+    if(sw<4 || sh<4){ setStatus('Crop area too small'); return; }
+
+    var tmp = document.createElement('canvas'); tmp.width = sw; tmp.height = sh;
+    tmp.getContext('2d').drawImage(sourceCanvas, sx,sy,sw,sh, 0,0,sw,sh);
+    sourceCanvas.width = sw; sourceCanvas.height = sh;
+    srcCtx.clearRect(0,0,sw,sh);
+    srcCtx.drawImage(tmp,0,0);
+
+    cropActive = false;
+    cropBox.style.display = 'none';
+    document.getElementById('cropStartBtn').style.display = '';
+    document.getElementById('cropApplyBtn').style.display = 'none';
+    document.getElementById('cropCancelBtn').style.display = 'none';
+    render();
+    setStatus('Crop applied');
+  }
+  window.applyCrop = applyCrop;
+
+  // crop drag/resize interactions (pointer events, works for touch + mouse)
+  (function(){
+    var dragMode = null; // 'move','nw','ne','sw','se'
+    var startPt = null, startRect = null;
+    function areaRect(){ return mainCanvas.getBoundingClientRect(); }
+
+    function pointerDown(mode){
+      return function(e){
+        e.preventDefault();
+        dragMode = mode;
+        var p = e.touches ? e.touches[0] : e;
+        startPt = {x:p.clientX, y:p.clientY};
+        startRect = {x:cropRect.x,y:cropRect.y,w:cropRect.w,h:cropRect.h};
+        document.addEventListener('mousemove', pointerMove);
+        document.addEventListener('mouseup', pointerUp);
+        document.addEventListener('touchmove', pointerMove, {passive:false});
+        document.addEventListener('touchend', pointerUp);
+      };
+    }
+    function pointerMove(e){
+      if(!dragMode) return;
+      e.preventDefault();
+      var p = e.touches ? e.touches[0] : e;
+      var dx = p.clientX-startPt.x, dy = p.clientY-startPt.y;
+      var bounds = areaRect();
+      var ar = ratioValue();
+
+      if(dragMode === 'move'){
+        var nx = startRect.x+dx, ny = startRect.y+dy;
+        nx = Math.max(0, Math.min(nx, bounds.width-startRect.w));
+        ny = Math.max(0, Math.min(ny, bounds.height-startRect.h));
+        cropRect.x = nx; cropRect.y = ny;
+      } else {
+        var r = {x:startRect.x,y:startRect.y,w:startRect.w,h:startRect.h};
+        if(dragMode.indexOf('e')>=0){ r.w = Math.max(20, startRect.w+dx); }
+        if(dragMode.indexOf('w')>=0){ var nw = Math.max(20, startRect.w-dx); r.x = startRect.x + (startRect.w-nw); r.w = nw; }
+        if(dragMode.indexOf('s')>=0){ r.h = Math.max(20, startRect.h+dy); }
+        if(dragMode.indexOf('n')>=0){ var nh = Math.max(20, startRect.h-dy); r.y = startRect.y + (startRect.h-nh); r.h = nh; }
+        if(ar){
+          r.h = r.w/ar;
+          if(dragMode.indexOf('n')>=0){ r.y = startRect.y+startRect.h-r.h; }
+        }
+        r.x = Math.max(0, Math.min(r.x, bounds.width-r.w));
+        r.y = Math.max(0, Math.min(r.y, bounds.height-r.h));
+        r.w = Math.min(r.w, bounds.width-r.x);
+        r.h = Math.min(r.h, bounds.height-r.y);
+        cropRect = r;
+      }
+      drawCropBox();
+    }
+    function pointerUp(){
+      dragMode = null;
+      document.removeEventListener('mousemove', pointerMove);
+      document.removeEventListener('mouseup', pointerUp);
+      document.removeEventListener('touchmove', pointerMove);
+      document.removeEventListener('touchend', pointerUp);
+    }
+
+    document.querySelector('#cropBox .h-move').addEventListener('mousedown', pointerDown('move'));
+    document.querySelector('#cropBox .h-move').addEventListener('touchstart', pointerDown('move'), {passive:false});
+    ['nw','ne','sw','se'].forEach(function(pos){
+      var el = document.querySelector('#cropBox .h-'+pos);
+      el.addEventListener('mousedown', pointerDown(pos));
+      el.addEventListener('touchstart', pointerDown(pos), {passive:false});
+    });
+  })();
+
+  window.addEventListener('resize', function(){ if(cropActive) positionCropBoxForRatio(); });
+
+  // drag & drop support on desktop
+  ['dragover','drop'].forEach(function(evt){
+    document.addEventListener(evt, function(e){ e.preventDefault(); });
+  });
+  document.addEventListener('drop', function(e){
+    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if(f && f.type.indexOf('image/')===0){
+      var reader = new FileReader();
+      reader.onload = function(ev){ loadImageFromURL(ev.target.result, true); };
+      reader.readAsDataURL(f);
+    }
+  });
+
+  // ---------------- Message box (XP-style modal) ----------------
+  function showMessageBox(title, html, icon){
+    document.getElementById('mbTitle').textContent = title;
+    document.getElementById('mbText').innerHTML = html;
+    document.getElementById('mbIcon').textContent = icon || 'i';
+    document.getElementById('mbOverlay').classList.add('open');
+  }
+  function closeMessageBox(){ document.getElementById('mbOverlay').classList.remove('open'); }
+  window.closeMessageBox = closeMessageBox;
+
+  // ---------------- Zoom (View menu) ----------------
+  function zoomBy(mult){
+    var w = mainCanvas.width; if(!w) return;
+    var cur = zoomMode==='fit' ? (parseFloat(mainCanvas.style.width)/w) : zoomMode;
+    zoomMode = Math.max(0.1, Math.min(4, cur*mult));
+    fitCanvasDisplay();
+  }
+  function zoomActual(){ zoomMode = 1; fitCanvasDisplay(); }
+  function zoomFit(){ zoomMode = 'fit'; fitCanvasDisplay(); }
+
+  // ---------------- Menubar ----------------
+  var menubar = document.getElementById('menubar');
+  var menuItems = Array.prototype.slice.call(menubar.querySelectorAll('.menuitem'));
+
+  function closeAllMenus(){
+    menuItems.forEach(function(m){ m.classList.remove('open'); });
+  }
+  function ddItem(label, fn, disabled){
+    var el = document.createElement('div');
+    el.className = 'ddi' + (disabled ? ' disabled' : '');
+    el.textContent = label;
+    if(!disabled){ el.addEventListener('click', function(){ closeAllMenus(); fn(); }); }
+    return el;
+  }
+  function ddSep(){ var el = document.createElement('div'); el.className='ddsep'; return el; }
+
+  function hasImage(){ return !!sourceCanvas.width; }
+
+  function buildMenus(){
+    var ddFile = document.getElementById('ddFile');
+    ddFile.appendChild(ddItem('Open Picture...', function(){ fileInput.click(); }));
+    ddFile.appendChild(ddItem('Save As...', function(){ saveImage(); }));
+    ddFile.appendChild(ddSep());
+    ddFile.appendChild(ddItem('New (Clear)', function(){ resetAll(); }));
+    ddFile.appendChild(ddSep());
+    ddFile.appendChild(ddItem('Exit', function(){ if(confirm('Close Photo Editor?')) resetAll(true); }));
+
+    var ddEdit = document.getElementById('ddEdit');
+    ddEdit.appendChild(ddItem('Rotate 90°', function(){ hasImage() ? rotateImage() : showMessageBox('Photo Editor.exe','Open a picture first.','!'); }));
+    ddEdit.appendChild(ddItem('Crop...', function(){ hasImage() ? startCrop() : showMessageBox('Photo Editor.exe','Open a picture first.','!'); }));
+    ddEdit.appendChild(ddSep());
+    ddEdit.appendChild(ddItem('Reset Adjustments', function(){
+      if(!hasImage()) return;
+      brightnessRange.value = 100; contrastRange.value = 100; saturateRange.value = 100;
+      currentFilter='none'; setActiveFilterBtn('none');
+      document.getElementById('statusFilter').textContent = 'Filter: None';
+      updateSliderLabels(); render();
+    }));
+    ddEdit.appendChild(ddItem('Reset to Original', function(){ hasImage() ? resetImage() : showMessageBox('Photo Editor.exe','Open a picture first.','!'); }));
+
+    var ddView = document.getElementById('ddView');
+    ddView.appendChild(ddItem('Zoom In', function(){ zoomBy(1.25); }));
+    ddView.appendChild(ddItem('Zoom Out', function(){ zoomBy(0.8); }));
+    ddView.appendChild(ddItem('Actual Size (100%)', function(){ zoomActual(); }));
+    ddView.appendChild(ddItem('Fit to Window', function(){ zoomFit(); }));
+
+    var ddFilters = document.getElementById('ddFilters');
+    filters.forEach(function(f){
+      ddFilters.appendChild(ddItem(f.name, function(){
+        if(!hasImage()){ showMessageBox('Photo Editor.exe','Open a picture first.','!'); return; }
+        currentFilter = f.id; setActiveFilterBtn(f.id);
+        document.getElementById('statusFilter').textContent = 'Filter: '+f.name;
+        render();
+      }));
+    });
+
+    var ddHelp = document.getElementById('ddHelp');
+    ddHelp.appendChild(ddItem('View Help Topics', function(){
+      showMessageBox('Photo Editor Help',
+        'Open a picture with <b>File &gt; Open</b>, then use the panels to crop, ' +
+        'set an aspect ratio, adjust brightness/contrast/saturation, and apply a ' +
+        '2000s-style filter. Use <b>File &gt; Save As</b> to save your picture or ' +
+        'send it to your camera roll.', 'i');
+    }));
+    ddHelp.appendChild(ddItem('About Photo Editor.exe', function(){
+      showMessageBox('About Photo Editor.exe',
+        '<b>Photo Editor.exe</b><br>A retro-styled photo editor.<br><br>' +
+        'Crop, adjust, and apply nostalgic 2000s filters — VHS, Color Burn, ' +
+        'Sepia, Duotone, and more — right in your browser.', '★');
+    }));
+  }
+  buildMenus();
+
+  menuItems.forEach(function(item){
+    item.addEventListener('click', function(e){
+      if(e.target.closest('.dropdown')) return; // clicks inside dropdown handled by ddItem
+      var wasOpen = item.classList.contains('open');
+      closeAllMenus();
+      if(!wasOpen) item.classList.add('open');
+      e.stopPropagation();
+    });
+  });
+  document.addEventListener('click', closeAllMenus);
+
+})();
+</script>
+</body>
+</html>
+
