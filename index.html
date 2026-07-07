@@ -137,6 +137,11 @@
     border-color:#a9791f;
   }
   .xpbtn:disabled{ opacity:.45; cursor:default; }
+  .undo-small{
+    padding:4px 7px; font-size:11px; margin-left:6px; min-width:34px;
+    display:inline-flex; align-items:center; justify-content:center; gap:4px;
+  }
+  .undo-main{ margin-left:8px; }
   .sep{ width:1px; align-self:stretch; background:#b8b391; margin:2px 3px; }
 
   .workspace{
@@ -312,9 +317,13 @@
       <div class="xpbtn" id="cropStartBtn" onclick="startCrop()" disabled>✂ Crop</div>
       <div class="xpbtn" id="cropApplyBtn" onclick="applyCrop()" style="display:none;">✔ Apply Crop</div>
       <div class="xpbtn" id="cropCancelBtn" onclick="cancelCrop()" style="display:none;">✖ Cancel Crop</div>
+      <div class="xpbtn undo-small" id="undoCropBtn" onclick="undoAction('crop')" title="Undo last crop" style="display:none;">↶</div>
       <div class="sep"></div>
       <div class="xpbtn" id="rotateBtn" onclick="rotateImage()" disabled>⟳ Rotate</div>
+      <div class="xpbtn undo-small" id="undoRotateBtn" onclick="undoAction('rotate')" title="Undo last rotate" style="display:none;">↶</div>
       <div class="xpbtn" id="resetBtn" onclick="resetImage()" disabled>↺ Reset</div>
+      <div class="xpbtn undo-main" id="undoBtn" onclick="undoAction()" disabled>↶ Undo</div>
+      <div class="xpbtn undo-main" id="redoBtn" onclick="redoAction()" disabled>↷ Redo</div>
     </div>
 
     <div class="workspace">
@@ -344,6 +353,18 @@
           <div class="sliderow">
             <div class="lab"><span>Saturation</span><span id="valSaturate">100%</span></div>
             <input type="range" id="rngSaturate" min="0" max="200" value="100">
+          </div>
+          <div class="sliderow">
+            <div class="lab"><span>Exposure</span><span id="valExposure">0</span></div>
+            <input type="range" id="rngExposure" min="-200" max="200" value="0">
+          </div>
+          <div class="sliderow">
+            <div class="lab"><span>Gamma</span><span id="valGamma">1.00</span></div>
+            <input type="range" id="rngGamma" min="50" max="200" value="100">
+          </div>
+          <div class="sliderow">
+            <div class="lab"><span>Temperature</span><span id="valTemp">0</span></div>
+            <input type="range" id="rngTemp" min="-100" max="100" value="0">
           </div>
         </div>
       </div>
@@ -435,6 +456,92 @@
   var brightnessRange = document.getElementById('rngBrightness');
   var contrastRange = document.getElementById('rngContrast');
   var saturateRange = document.getElementById('rngSaturate');
+  var exposureRange = document.getElementById('rngExposure');
+  var gammaRange = document.getElementById('rngGamma');
+  var tempRange = document.getElementById('rngTemp');
+
+  // ---------------- History / Undo ----------------
+  var history = [];
+  var redoHistory = [];
+  var HISTORY_MAX = 40;
+  var pendingAdjustSnapshot = null;
+
+  function snapshot(){
+    return {
+      dataURL: sourceCanvas.toDataURL(),
+      filter: currentFilter,
+      brightness: brightnessRange.value,
+      contrast: contrastRange.value,
+      saturate: saturateRange.value,
+      exposure: (typeof exposureRange !== 'undefined' ? exposureRange.value : 0),
+      gamma: (typeof gammaRange !== 'undefined' ? gammaRange.value : 100),
+      temperature: (typeof tempRange !== 'undefined' ? tempRange.value : 0)
+    };
+  }
+
+  function pushHistory(type, snap){
+    try{
+      if(!snap) snap = snapshot();
+      history.push({type:type||'action', snap:snap});
+      while(history.length>HISTORY_MAX) history.shift();
+      // any new user action clears the redo stack
+      redoHistory = [];
+      updateUndoUI();
+    }catch(e){ /* ignore snapshot errors */ }
+  }
+
+  function restoreSnapshot(snap){
+    if(!snap) return;
+    loadImageFromURL(snap.dataURL, false);
+    currentFilter = snap.filter || 'none';
+    setActiveFilterBtn(currentFilter);
+    brightnessRange.value = snap.brightness || 100;
+    contrastRange.value = snap.contrast || 100;
+    saturateRange.value = snap.saturate || 100;
+    if(typeof exposureRange !== 'undefined') exposureRange.value = (snap.exposure !== undefined ? snap.exposure : 0);
+    if(typeof gammaRange !== 'undefined') gammaRange.value = (snap.gamma !== undefined ? snap.gamma : 100);
+    if(typeof tempRange !== 'undefined') tempRange.value = (snap.temperature !== undefined ? snap.temperature : 0);
+    document.getElementById('statusFilter').textContent = 'Filter: '+(getFilterDef(currentFilter).name || 'None');
+    updateSliderLabels();
+    render();
+  }
+
+  function undoAction(expectedType){
+    if(history.length===0){ setStatus('Nothing to undo'); return; }
+    var last = history[history.length-1];
+    if(expectedType && last.type !== expectedType){ setStatus('No matching action to undo'); return; }
+    // capture current state so redo can restore it
+    try{ var curSnap = snapshot(); }catch(e){ curSnap = null; }
+    history.pop();
+    if(curSnap) redoHistory.push({type: last.type, snap: curSnap});
+    restoreSnapshot(last.snap);
+    setStatus('Undid '+last.type);
+    updateUndoUI();
+  }
+  window.undoAction = undoAction;
+
+  function redoAction(){
+    if(redoHistory.length===0){ setStatus('Nothing to redo'); return; }
+    var next = redoHistory.pop();
+    // push current state so undo can return to it
+    try{ var cur = snapshot(); history.push({type: next.type, snap: cur}); }catch(e){}
+    restoreSnapshot(next.snap);
+    setStatus('Redid '+next.type);
+    updateUndoUI();
+  }
+  window.redoAction = redoAction;
+
+  function updateUndoUI(){
+    var last = history[history.length-1];
+    var undoMain = document.getElementById('undoBtn');
+    var undoRotate = document.getElementById('undoRotateBtn');
+    var undoCrop = document.getElementById('undoCropBtn');
+    if(undoMain) undoMain.disabled = !last;
+    if(undoRotate) undoRotate.style.display = (last && last.type==='rotate') ? '' : 'none';
+    if(undoCrop) undoCrop.style.display = (last && last.type==='crop') ? '' : 'none';
+    var redoMain = document.getElementById('redoBtn');
+    if(redoMain) redoMain.disabled = !(redoHistory && redoHistory.length>0);
+  }
 
   function setStatus(msg){ document.getElementById('statusMsg').textContent = msg; }
 
@@ -472,6 +579,9 @@
       currentFilter = 'none';
       setActiveFilterBtn('none');
       brightnessRange.value = 100; contrastRange.value = 100; saturateRange.value = 100;
+      if(typeof exposureRange !== 'undefined') exposureRange.value = 0;
+      if(typeof gammaRange !== 'undefined') gammaRange.value = 100;
+      if(typeof tempRange !== 'undefined') tempRange.value = 0;
       updateSliderLabels();
       render();
       setStatus('Picture loaded');
@@ -498,6 +608,14 @@
     {id:'duotone', name:'Duotone', b:1, c:1.1, s:1, sepia:0, gray:1, invert:0, fx:'duotone', sw:'linear-gradient(135deg,#0057ff,#ff7a00)'},
     {id:'warm', name:'Warm Glow', b:1.05, c:1, s:1.3, sepia:0.2, gray:0, invert:0, fx:'tintwarm', sw:'linear-gradient(135deg,#ffcf7a,#ff7a3d)'},
     {id:'cool', name:'Cool Blue', b:1, c:1, s:1.15, sepia:0, gray:0, invert:0, fx:'tintcool', sw:'linear-gradient(135deg,#7ac9ff,#1a3d7a)'}
+    ,{id:'lomo', name:'Lomo', b:1.02, c:1.15, s:1.35, sepia:0, gray:0, invert:0, fx:'lomo', sw:'linear-gradient(135deg,#ff4d7a,#6b2b8f)'}
+    ,{id:'clarity', name:'Clarity', b:1, c:1.12, s:1.05, sepia:0, gray:0, invert:0, fx:'clarity', sw:'linear-gradient(135deg,#dfefff,#a0c4ff)'}
+    ,{id:'cinematic', name:'Cinematic', b:0.98, c:1.05, s:0.95, sepia:0, gray:0, invert:0, fx:'cinematic', sw:'linear-gradient(135deg,#0f172a,#0b3b3b)'}
+    ,{id:'solarize', name:'Solarize', b:1, c:1, s:1, sepia:0, gray:0, invert:0, fx:'solarize', sw:'linear-gradient(135deg,#ffd36b,#4b1f7f)'}
+    ,{id:'bleach', name:'Bleach', b:1.06, c:1.08, s:0.9, sepia:0, gray:0, invert:0, fx:'bleach', sw:'linear-gradient(135deg,#ffffff,#d8dbe2)'}
+    ,{id:'hdr', name:'HDR Pop', b:1, c:1.18, s:1.25, sepia:0, gray:0, invert:0, fx:'hdr', sw:'linear-gradient(135deg,#ffd89b,#19547b)'}
+    ,{id:'softfocus', name:'Soft Focus', b:1.02, c:0.98, s:0.95, sepia:0, gray:0, invert:0, fx:'softfocus', sw:'linear-gradient(135deg,#ffe6f2,#f0f8ff)'}
+    ,{id:'camcorder', name:'Camcorder', b:0.98, c:1.08, s:0.9, sepia:0, gray:0, invert:0, fx:'camcorder', sw:'linear-gradient(135deg,#d6ffd6,#bde0ff)'}
   ];
 
   var filterRow = document.getElementById('filterRow');
@@ -506,6 +624,8 @@
     btn.className = 'filterbtn'; btn.dataset.filter = f.id;
     btn.innerHTML = '<div class="fswatch" style="background:'+f.sw+'"></div>'+f.name;
     btn.addEventListener('click', function(){
+      // record previous state so filter can be undone
+      pushHistory('filter');
       currentFilter = f.id;
       setActiveFilterBtn(f.id);
       document.getElementById('statusFilter').textContent = 'Filter: '+f.name;
@@ -529,9 +649,17 @@
     document.getElementById('valBrightness').textContent = brightnessRange.value+'%';
     document.getElementById('valContrast').textContent = contrastRange.value+'%';
     document.getElementById('valSaturate').textContent = saturateRange.value+'%';
+    document.getElementById('valExposure').textContent = (exposureRange.value>0?'+':'')+exposureRange.value;
+    document.getElementById('valGamma').textContent = (gammaRange.value/100).toFixed(2);
+    document.getElementById('valTemp').textContent = (tempRange.value>0?'+':'')+tempRange.value;
   }
-  [brightnessRange, contrastRange, saturateRange].forEach(function(r){
+  [brightnessRange, contrastRange, saturateRange, exposureRange, gammaRange, tempRange].forEach(function(r){
     r.addEventListener('input', function(){ updateSliderLabels(); render(); });
+    // record a snapshot when the user starts adjusting so we can undo the whole adjustment
+    r.addEventListener('pointerdown', function(){ pendingAdjustSnapshot = snapshot(); });
+    r.addEventListener('mousedown', function(){ pendingAdjustSnapshot = snapshot(); });
+    r.addEventListener('touchstart', function(){ pendingAdjustSnapshot = snapshot(); }, {passive:true});
+    r.addEventListener('change', function(){ if(pendingAdjustSnapshot){ pushHistory('adjust', pendingAdjustSnapshot); pendingAdjustSnapshot = null; } });
   });
 
   // ---------------- Pixel effect helpers ----------------
@@ -551,12 +679,24 @@
     var d = imgData.data;
     var br = o.brightness, ct = o.contrast, sa = o.saturate;
     var sepiaAmt = o.sepia, grayAmt = o.grayscale, inv = o.invert;
+    var exposure = (o.exposure !== undefined ? parseFloat(o.exposure) : 0);
+    var gammaVal = (o.gamma !== undefined ? (parseFloat(o.gamma)/100) : 1);
+    var temp = (o.temperature !== undefined ? parseFloat(o.temperature) : 0);
     for(var i=0;i<d.length;i+=4){
       var r=d[i], g=d[i+1], b=d[i+2];
+      // apply exposure in stops-like linear multiplier (value is -200..200)
+      var expMul = Math.pow(2, exposure/100);
+      r*=expMul; g*=expMul; b*=expMul;
       r*=br; g*=br; b*=br;
       r=(r-128)*ct+128; g=(g-128)*ct+128; b=(b-128)*ct+128;
       var lum = 0.299*r+0.587*g+0.114*b;
       r = lum+(r-lum)*sa; g = lum+(g-lum)*sa; b = lum+(b-lum)*sa;
+      // temperature tweak: positive warms (add red, subtract blue), negative cools
+      if(temp!==0){
+        var t = temp/100; // -1..1
+        if(t>0){ r = r + (255-r)*t*0.12; b = b - b*t*0.12; }
+        else { r = r + r*t*0.06; b = b - (255-b)*t*0.12; }
+      }
       if(grayAmt>0){
         var gy = 0.299*r+0.587*g+0.114*b;
         r += (gy-r)*grayAmt; g += (gy-g)*grayAmt; b += (gy-b)*grayAmt;
@@ -568,6 +708,12 @@
         r += (sr-r)*sepiaAmt; g += (sg-g)*sepiaAmt; b += (sb-b)*sepiaAmt;
       }
       if(inv){ r=255-r; g=255-g; b=255-b; }
+      // gamma correction (apply at end of per-pixel ops)
+      if(gammaVal && gammaVal>0 && Math.abs(gammaVal-1) > 0.0001){
+        r = 255*Math.pow(Math.max(0,Math.min(1, r/255)), 1/gammaVal);
+        g = 255*Math.pow(Math.max(0,Math.min(1, g/255)), 1/gammaVal);
+        b = 255*Math.pow(Math.max(0,Math.min(1, b/255)), 1/gammaVal);
+      }
       d[i]=clamp(r); d[i+1]=clamp(g); d[i+2]=clamp(b);
     }
   }
@@ -646,6 +792,19 @@
     ctx.restore();
   }
 
+  function roundRect(ctx, x, y, width, height, radius, fill, stroke){
+    if (typeof radius === 'undefined') radius = 6;
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.arcTo(x + width, y, x + width, y + height, radius);
+    ctx.arcTo(x + width, y + height, x, y + height, radius);
+    ctx.arcTo(x, y + height, x, y, radius);
+    ctx.arcTo(x, y, x + width, y, radius);
+    ctx.closePath();
+    if(fill) ctx.fill();
+    if(stroke) ctx.stroke();
+  }
+
   // ---------------- Render pipeline ----------------
   function render(){
     var w = sourceCanvas.width, h = sourceCanvas.height;
@@ -661,7 +820,10 @@
     var base = mainCtx.getImageData(0,0,w,h);
     applyAdjustments(base, {
       brightness: b*def.b, contrast: c*def.c, saturate: s*def.s,
-      sepia: def.sepia, grayscale: def.gray, invert: def.invert
+      sepia: def.sepia, grayscale: def.gray, invert: def.invert,
+      exposure: (typeof exposureRange !== 'undefined' ? exposureRange.value : 0),
+      gamma: (typeof gammaRange !== 'undefined' ? gammaRange.value : 100),
+      temperature: (typeof tempRange !== 'undefined' ? tempRange.value : 0)
     });
     mainCtx.putImageData(base,0,0);
 
@@ -721,6 +883,88 @@
         drawVignette(mainCtx,w,h,0.5);
         drawTint(mainCtx,w,h,'#0aff5a',0.05,'overlay');
         break;
+      case 'camcorder':
+        // camcorder look: chroma shift, heavy noise, pronounced scanlines, greenish tint, vignette, HUD
+        drawChromaShift(mainCtx, mainCanvas, w, h, Math.max(1, Math.round(w*0.008)));
+        (function(){
+          var id = mainCtx.getImageData(0,0,w,h);
+          addNoise(id, 26);
+          mainCtx.putImageData(id,0,0);
+        })();
+        drawScanlines(mainCtx,w,h,0.26);
+        drawVignette(mainCtx,w,h,0.45);
+        drawTint(mainCtx,w,h,'#dfffd6',0.06,'overlay');
+        // date (bottom-left) and time (top-right) overlays + HUD
+        try{
+          var td = new Date();
+          var Y = td.getFullYear();
+          var M = String(td.getMonth()+1).padStart(2,'0');
+          var D = String(td.getDate()).padStart(2,'0');
+          var HH = String(td.getHours()).padStart(2,'0');
+          var MM = String(td.getMinutes()).padStart(2,'0');
+          var SS = String(td.getSeconds()).padStart(2,'0');
+          var dateStr = Y + '/' + M + '/' + D;
+          var timeStr = HH + ':' + MM + ':' + SS;
+
+          // HUD: REC badge and battery
+          mainCtx.save();
+          mainCtx.globalAlpha = 0.9;
+          mainCtx.font = Math.max(12, Math.round(w*0.028)) + 'px Tahoma, Arial';
+          mainCtx.textBaseline = 'top';
+          mainCtx.fillStyle = 'rgba(0,0,0,0.45)';
+          mainCtx.fillRect(6,6,84,28);
+          mainCtx.fillStyle = '#fff';
+          mainCtx.fillText('REC', 14, 11);
+          mainCtx.fillStyle = '#ff3b30'; mainCtx.beginPath(); mainCtx.arc(62, 22, 6, 0, Math.PI*2); mainCtx.fill();
+          var bw = 44, bh = 16;
+          var bx = w - bw - 12, by = 12;
+          mainCtx.fillStyle = 'rgba(0,0,0,0.45)';
+          mainCtx.fillRect(bx-2, by-2, bw+6, bh+6);
+          mainCtx.strokeStyle = '#ddd'; mainCtx.lineWidth = 1;
+          mainCtx.strokeRect(bx, by, bw, bh);
+          mainCtx.fillStyle = '#bfff6a';
+          mainCtx.fillRect(bx+4, by+3, Math.max(0, bw-8), bh-6);
+          mainCtx.fillStyle = '#ddd';
+          mainCtx.fillRect(bx + bw + 2, by + Math.round(bh*0.28), 4, Math.round(bh*0.44));
+          mainCtx.globalAlpha = 0.55;
+          mainCtx.strokeStyle = '#fff';
+          mainCtx.lineWidth = Math.max(2, Math.round(w*0.0025));
+          roundRect(mainCtx, 4, 4, w-8, h-8, 6, false, true);
+          mainCtx.globalAlpha = 0.25;
+          for(var i=0;i<180;i++){
+            var x = Math.random()*w, y = Math.random()*h;
+            mainCtx.fillStyle = 'rgba(255,255,255,'+(Math.random()*0.5)+')';
+            mainCtx.fillRect(x, y, Math.random()*2, Math.random()*2);
+          }
+          mainCtx.restore();
+
+          // date bottom-left
+          mainCtx.save();
+          mainCtx.font = Math.max(11, Math.round(w*0.024)) + 'px Tahoma, Arial';
+          mainCtx.fillStyle = 'rgba(255,240,128,0.95)';
+          mainCtx.textBaseline = 'bottom';
+          mainCtx.fillText(dateStr, 8, h - 8);
+          mainCtx.restore();
+
+          // time top-right with dark backdrop
+          mainCtx.save();
+          var timeFontSize = Math.max(14, Math.round(w*0.034));
+          mainCtx.font = timeFontSize + 'px Tahoma, Arial';
+          var metrics = mainCtx.measureText(timeStr);
+          var tw = Math.ceil(metrics.width);
+          var pad = Math.max(8, Math.round(w*0.01));
+          var boxW = tw + pad*2;
+          var boxH = timeFontSize + 8;
+          var bx2 = Math.max(8, w - boxW - 12);
+          var by2 = 8;
+          mainCtx.fillStyle = 'rgba(0,0,0,0.45)';
+          mainCtx.fillRect(bx2, by2, boxW, boxH);
+          mainCtx.fillStyle = '#fff';
+          mainCtx.textBaseline = 'top';
+          mainCtx.fillText(timeStr, bx2 + pad, by2 + 4);
+          mainCtx.restore();
+        }catch(e){}
+        break;
       case 'duotone':
         drawDuotone(mainCtx,w,h,'#1030a0','#ff8c1a');
         break;
@@ -730,6 +974,72 @@
         break;
       case 'tintcool':
         drawTint(mainCtx,w,h,'#3d8aff',0.16,'soft-light');
+        break;
+      case 'lomo':
+        drawVignette(mainCtx,w,h,0.6);
+        drawTint(mainCtx,w,h,'#ff2a6d',0.06,'soft-light');
+        break;
+      case 'clarity':
+        // small midtone punch using overlay tints
+        drawTint(mainCtx,w,h,'#000',0.04,'overlay');
+        drawTint(mainCtx,w,h,'#fff',0.02,'overlay');
+        break;
+      case 'cinematic':
+        // desaturated, cool grade + letterbox bars
+        drawTint(mainCtx,w,h,'#001018',0.06,'overlay');
+        mainCtx.save();
+        mainCtx.fillStyle = '#000';
+        var bar = Math.round(h*0.07);
+        mainCtx.fillRect(0,0,w,bar);
+        mainCtx.fillRect(0,h-bar,w,bar);
+        mainCtx.restore();
+        break;
+      case 'solarize':
+        (function(){
+          var id = mainCtx.getImageData(0,0,w,h);
+          var d = id.data;
+          for(var i=0;i<d.length;i+=4){
+            if(d[i]>128) d[i]=255-d[i];
+            if(d[i+1]>128) d[i+1]=255-d[i+1];
+            if(d[i+2]>128) d[i+2]=255-d[i+2];
+          }
+          mainCtx.putImageData(id,0,0);
+        })();
+        break;
+      case 'bleach':
+        drawTint(mainCtx,w,h,'#fff',0.06,'screen');
+        drawVignette(mainCtx,w,h,0.18);
+        break;
+      case 'hdr':
+        // mild HDR-like pop: boost contrast locally and add vignette
+        (function(){
+          var id = mainCtx.getImageData(0,0,w,h);
+          var d = id.data;
+          for(var i=0;i<d.length;i+=4){
+            d[i] = clamp((d[i]-128)*1.06 + 128);
+            d[i+1] = clamp((d[i+1]-128)*1.06 + 128);
+            d[i+2] = clamp((d[i+2]-128)*1.06 + 128);
+          }
+          mainCtx.putImageData(id,0,0);
+        })();
+        drawVignette(mainCtx,w,h,0.25);
+        drawTint(mainCtx,w,h,'#fff',0.03,'soft-light');
+        break;
+      case 'softfocus':
+        (function(){
+          try{
+            var tmp = document.createElement('canvas'); tmp.width=w; tmp.height=h;
+            var tctx = tmp.getContext('2d');
+            if(tctx.filter !== undefined){
+              tctx.filter = 'blur(4px)';
+              tctx.drawImage(mainCanvas,0,0);
+              tctx.filter = 'none';
+              mainCtx.save(); mainCtx.globalAlpha = 0.55;
+              mainCtx.drawImage(tmp,0,0);
+              mainCtx.restore();
+            }
+          }catch(e){}
+        })();
         break;
       default: break;
     }
@@ -762,6 +1072,8 @@
 
   // ---------------- Rotate / Reset ----------------
   function rotateImage(){
+    // save state so rotate can be undone
+    pushHistory('rotate');
     var w = sourceCanvas.width, h = sourceCanvas.height;
     var tmp = document.createElement('canvas'); tmp.width = h; tmp.height = w;
     var tctx = tmp.getContext('2d');
@@ -777,6 +1089,7 @@
 
   function resetImage(){
     if(!originalDataURL) return;
+    pushHistory('reset');
     loadImageFromURL(originalDataURL, false);
     setStatus('Reset to original');
   }
@@ -913,6 +1226,8 @@
   }
 
   function applyCrop(){
+    // record state so crop can be undone
+    pushHistory('crop');
     var rect = mainCanvas.getBoundingClientRect();
     var scaleX = mainCanvas.width / rect.width;
     var scaleY = mainCanvas.height / rect.height;
@@ -1073,7 +1388,11 @@
     ddEdit.appendChild(ddSep());
     ddEdit.appendChild(ddItem('Reset Adjustments', function(){
       if(!hasImage()) return;
+      pushHistory('adjust');
       brightnessRange.value = 100; contrastRange.value = 100; saturateRange.value = 100;
+      if(typeof exposureRange !== 'undefined') exposureRange.value = 0;
+      if(typeof gammaRange !== 'undefined') gammaRange.value = 100;
+      if(typeof tempRange !== 'undefined') tempRange.value = 0;
       currentFilter='none'; setActiveFilterBtn('none');
       document.getElementById('statusFilter').textContent = 'Filter: None';
       updateSliderLabels(); render();
@@ -1112,6 +1431,7 @@
     }));
   }
   buildMenus();
+  updateUndoUI();
 
   menuItems.forEach(function(item){
     item.addEventListener('click', function(e){
