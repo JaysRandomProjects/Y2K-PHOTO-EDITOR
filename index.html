@@ -555,11 +555,11 @@
       localStorage.setItem(key, String(count));
       var el = document.getElementById('visitCount');
       if(el){ el.textContent = count + ' visit' + (count === 1 ? '' : 's'); }
-      document.title = "Jay's Editor Studio " + count;
+      document.title = "Jay's Editor Studio";
     }catch(e){
       var el = document.getElementById('visitCount');
       if(el){ el.textContent = '1 visit'; }
-      document.title = "Jay's Editor Studio 1";
+      document.title = "Jay's Editor Studio";
     }
   }
   tickClock(); setInterval(tickClock,1000*15);
