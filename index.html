@@ -180,6 +180,26 @@
     border:1px solid rgba(0,0,0,.25);
   }
 
+  .custom-btn{ width:100%; justify-content:center; }
+  .custom-help{ font-size:10px; color:#5a594b; line-height:1.35; margin-top:4px; }
+  .custom-overlay{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,.36); z-index:220;
+    align-items:center; justify-content:center; padding:16px;
+  }
+  .custom-overlay.open{ display:flex; }
+  .custom-panel{
+    width:min(760px, 100%); background:#ece9d8; border:1px solid #0831d9;
+    border-radius:8px 8px 3px 3px; box-shadow:3px 3px 14px rgba(0,0,0,.6); overflow:hidden;
+  }
+  .custom-body{ padding:12px; display:grid; grid-template-columns: minmax(180px, 250px) 1fr; gap:12px; }
+  .custom-preview{ border:1px solid #a2a08c; border-radius:6px; background:linear-gradient(135deg,#fff,#ddd); min-height:160px; display:flex; align-items:center; justify-content:center; padding:10px; }
+  .custom-preview-swatch{ width:100%; height:100%; min-height:140px; border-radius:6px; border:1px solid rgba(0,0,0,.2); box-shadow: inset 0 0 0 1px rgba(255,255,255,.4); }
+  .custom-controls{ display:grid; gap:8px; max-height:70vh; overflow:auto; padding-right:2px; }
+  .custom-inline{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .custom-color{ width:42px; height:24px; border:1px solid #8f8b76; border-radius:3px; padding:0; background:none; }
+  .custom-note{ font-size:10px; color:#5a594b; line-height:1.35; margin-top:2px; }
+  .custom-actions{ display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+
   .sliderow{ margin-top:8px; font-size:10.5px; }
   .sliderow div.lab{ display:flex; justify-content:space-between; margin-bottom:2px;}
   .sliderow input[type=range]{ width:100%; }
@@ -392,6 +412,13 @@
           <div class="lbl">2000s Filters</div>
           <div class="row" id="filterRow"></div>
         </div>
+        <div class="groupbox">
+          <div class="lbl">Create Your Own</div>
+          <div class="row">
+            <button class="xpbtn primary custom-btn" type="button" onclick="openCustomFilterBuilder()">🧪 Make Your Own Filter</button>
+          </div>
+          <div class="custom-help">Blend brightness, tint, grain, and vignette into a custom preset with endless combinations.</div>
+        </div>
       </div>
     </div>
 
@@ -416,6 +443,79 @@
       <div class="mtext" id="mbText"></div>
     </div>
     <div class="mbfoot"><div class="xpbtn primary" onclick="closeMessageBox()">OK</div></div>
+  </div>
+</div>
+
+<div id="customFilterOverlay" class="custom-overlay">
+  <div class="custom-panel">
+    <div class="titlebar">
+      <div class="ticon"></div>
+      <span>Make Your Own Filter</span>
+      <div class="tspacer"></div>
+      <div class="tbtn close" onclick="closeCustomFilterBuilder()">✕</div>
+    </div>
+    <div class="custom-body">
+      <div class="custom-preview">
+        <div id="customPreviewSwatch" class="custom-preview-swatch"></div>
+      </div>
+      <div class="custom-controls">
+        <div class="sliderow">
+          <div class="lab"><span>Preset Name</span></div>
+          <input id="customNameInput" class="custom-input" type="text" maxlength="28" value="My Filter">
+        </div>
+        <div class="sliderow">
+          <div class="lab"><span>Brightness</span><span id="valCustomBrightness">100%</span></div>
+          <input id="rngCustomBrightness" type="range" min="0" max="200" value="100">
+        </div>
+        <div class="sliderow">
+          <div class="lab"><span>Contrast</span><span id="valCustomContrast">100%</span></div>
+          <input id="rngCustomContrast" type="range" min="0" max="200" value="100">
+        </div>
+        <div class="sliderow">
+          <div class="lab"><span>Saturation</span><span id="valCustomSaturation">100%</span></div>
+          <input id="rngCustomSaturation" type="range" min="0" max="200" value="100">
+        </div>
+        <div class="sliderow">
+          <div class="lab"><span>Sepia</span><span id="valCustomSepia">0%</span></div>
+          <input id="rngCustomSepia" type="range" min="0" max="100" value="0">
+        </div>
+        <div class="sliderow">
+          <div class="lab"><span>Grayscale</span><span id="valCustomGrayscale">0%</span></div>
+          <input id="rngCustomGrayscale" type="range" min="0" max="100" value="0">
+        </div>
+        <div class="sliderow">
+          <div class="lab"><span>Tint Color</span></div>
+          <div class="custom-inline">
+            <input id="customTintColor" class="custom-color" type="color" value="#ff8a3d">
+            <span class="custom-note">Choose a tint color to create a signature look.</span>
+          </div>
+        </div>
+        <div class="sliderow">
+          <div class="lab"><span>Tint Strength</span><span id="valCustomTint">0%</span></div>
+          <input id="rngCustomTint" type="range" min="0" max="100" value="0">
+        </div>
+        <div class="sliderow">
+          <div class="lab"><span>Vignette</span><span id="valCustomVignette">0%</span></div>
+          <input id="rngCustomVignette" type="range" min="0" max="100" value="0">
+        </div>
+        <div class="sliderow">
+          <div class="lab"><span>Grain</span><span id="valCustomGrain">0%</span></div>
+          <input id="rngCustomGrain" type="range" min="0" max="100" value="0">
+        </div>
+        <div class="sliderow">
+          <div class="lab"><span>Blur</span><span id="valCustomBlur">0px</span></div>
+          <input id="rngCustomBlur" type="range" min="0" max="20" value="0">
+        </div>
+        <div class="sliderow">
+          <label class="custom-inline"><input id="chkCustomInvert" type="checkbox"> Invert colors</label>
+        </div>
+        <div class="custom-actions">
+          <div class="xpbtn primary" onclick="applyCustomFilter()">Apply to Image</div>
+          <div class="xpbtn" onclick="saveCustomFilter()">Save Preset</div>
+          <div class="xpbtn" onclick="closeCustomFilterBuilder()">Close</div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -446,6 +546,8 @@
   var currentFilter = 'none';
   var currentRatio = 'free';
   var MAX_DIM = 1400;
+  var customFilterState = null;
+  var customPresetCounter = 0;
 
   var mainCanvas = document.getElementById('mainCanvas');
   var mainCtx = mainCanvas.getContext('2d');
@@ -607,40 +709,225 @@
     {id:'oldtv', name:'Old TV', b:0.95, c:1.15, s:1, sepia:0, gray:0.6, invert:0, fx:'oldtv', sw:'linear-gradient(135deg,#7cff7c,#0a3d0a)'},
     {id:'duotone', name:'Duotone', b:1, c:1.1, s:1, sepia:0, gray:1, invert:0, fx:'duotone', sw:'linear-gradient(135deg,#0057ff,#ff7a00)'},
     {id:'warm', name:'Warm Glow', b:1.05, c:1, s:1.3, sepia:0.2, gray:0, invert:0, fx:'tintwarm', sw:'linear-gradient(135deg,#ffcf7a,#ff7a3d)'},
-    {id:'cool', name:'Cool Blue', b:1, c:1, s:1.15, sepia:0, gray:0, invert:0, fx:'tintcool', sw:'linear-gradient(135deg,#7ac9ff,#1a3d7a)'}
-    ,{id:'lomo', name:'Lomo', b:1.02, c:1.15, s:1.35, sepia:0, gray:0, invert:0, fx:'lomo', sw:'linear-gradient(135deg,#ff4d7a,#6b2b8f)'}
-    ,{id:'clarity', name:'Clarity', b:1, c:1.12, s:1.05, sepia:0, gray:0, invert:0, fx:'clarity', sw:'linear-gradient(135deg,#dfefff,#a0c4ff)'}
-    ,{id:'cinematic', name:'Cinematic', b:0.98, c:1.05, s:0.95, sepia:0, gray:0, invert:0, fx:'cinematic', sw:'linear-gradient(135deg,#0f172a,#0b3b3b)'}
-    ,{id:'solarize', name:'Solarize', b:1, c:1, s:1, sepia:0, gray:0, invert:0, fx:'solarize', sw:'linear-gradient(135deg,#ffd36b,#4b1f7f)'}
-    ,{id:'bleach', name:'Bleach', b:1.06, c:1.08, s:0.9, sepia:0, gray:0, invert:0, fx:'bleach', sw:'linear-gradient(135deg,#ffffff,#d8dbe2)'}
-    ,{id:'hdr', name:'HDR Pop', b:1, c:1.18, s:1.25, sepia:0, gray:0, invert:0, fx:'hdr', sw:'linear-gradient(135deg,#ffd89b,#19547b)'}
-    ,{id:'softfocus', name:'Soft Focus', b:1.02, c:0.98, s:0.95, sepia:0, gray:0, invert:0, fx:'softfocus', sw:'linear-gradient(135deg,#ffe6f2,#f0f8ff)'}
-    ,{id:'camcorder', name:'Camcorder', b:0.98, c:1.08, s:0.9, sepia:0, gray:0, invert:0, fx:'camcorder', sw:'linear-gradient(135deg,#d6ffd6,#bde0ff)'}
+    {id:'cool', name:'Cool Blue', b:1, c:1, s:1.15, sepia:0, gray:0, invert:0, fx:'tintcool', sw:'linear-gradient(135deg,#7ac9ff,#1a3d7a)'},
+    {id:'lomo', name:'Lomo', b:1.02, c:1.15, s:1.35, sepia:0, gray:0, invert:0, fx:'lomo', sw:'linear-gradient(135deg,#ff4d7a,#6b2b8f)'},
+    {id:'clarity', name:'Clarity', b:1, c:1.12, s:1.05, sepia:0, gray:0, invert:0, fx:'clarity', sw:'linear-gradient(135deg,#dfefff,#a0c4ff)'},
+    {id:'cinematic', name:'Cinematic', b:0.98, c:1.05, s:0.95, sepia:0, gray:0, invert:0, fx:'cinematic', sw:'linear-gradient(135deg,#0f172a,#0b3b3b)'},
+    {id:'solarize', name:'Solarize', b:1, c:1, s:1, sepia:0, gray:0, invert:0, fx:'solarize', sw:'linear-gradient(135deg,#ffd36b,#4b1f7f)'},
+    {id:'bleach', name:'Bleach', b:1.06, c:1.08, s:0.9, sepia:0, gray:0, invert:0, fx:'bleach', sw:'linear-gradient(135deg,#ffffff,#d8dbe2)'},
+    {id:'hdr', name:'HDR Pop', b:1, c:1.18, s:1.25, sepia:0, gray:0, invert:0, fx:'hdr', sw:'linear-gradient(135deg,#ffd89b,#19547b)'},
+    {id:'softfocus', name:'Soft Focus', b:1.02, c:0.98, s:0.95, sepia:0, gray:0, invert:0, fx:'softfocus', sw:'linear-gradient(135deg,#ffe6f2,#f0f8ff)'},
+    {id:'camcorder', name:'Camcorder', b:0.98, c:1.08, s:0.9, sepia:0, gray:0, invert:0, fx:'camcorder', sw:'linear-gradient(135deg,#d6ffd6,#bde0ff)'}
   ];
 
   var filterRow = document.getElementById('filterRow');
-  filters.forEach(function(f){
-    var btn = document.createElement('div');
-    btn.className = 'filterbtn'; btn.dataset.filter = f.id;
-    btn.innerHTML = '<div class="fswatch" style="background:'+f.sw+'"></div>'+f.name;
-    btn.addEventListener('click', function(){
-      // record previous state so filter can be undone
-      pushHistory('filter');
-      currentFilter = f.id;
-      setActiveFilterBtn(f.id);
-      document.getElementById('statusFilter').textContent = 'Filter: '+f.name;
-      render();
-    });
-    filterRow.appendChild(btn);
-  });
+  var customFilterOverlay = document.getElementById('customFilterOverlay');
+  var customPreviewSwatch = document.getElementById('customPreviewSwatch');
+  var customNameInput = document.getElementById('customNameInput');
+  var customTintColorInput = document.getElementById('customTintColor');
+  var customInvertCheckbox = document.getElementById('chkCustomInvert');
+
+  function getDefaultCustomFilterState(){
+    return {
+      name:'My Filter',
+      brightness:100,
+      contrast:100,
+      saturation:100,
+      sepia:0,
+      grayscale:0,
+      invert:false,
+      tintColor:'#ff8a3d',
+      tintStrength:0,
+      vignette:0,
+      grain:0,
+      blur:0
+    };
+  }
+
+  function buildCustomFilterDef(state){
+    var s = state || getDefaultCustomFilterState();
+    return {
+      id:'__custom_preview__',
+      name: s.name || 'My Filter',
+      b: (s.brightness !== undefined ? s.brightness/100 : 1),
+      c: (s.contrast !== undefined ? s.contrast/100 : 1),
+      s: (s.saturation !== undefined ? s.saturation/100 : 1),
+      sepia: (s.sepia !== undefined ? s.sepia/100 : 0),
+      gray: (s.grayscale !== undefined ? s.grayscale/100 : 0),
+      invert: s.invert ? 1 : 0,
+      fx:'custom',
+      custom:s,
+      sw:'linear-gradient(135deg,' + (s.tintColor || '#ff8a3d') + ', #111)'
+    };
+  }
+
   function setActiveFilterBtn(id){
     Array.prototype.forEach.call(filterRow.children, function(el){
       el.classList.toggle('active', el.dataset.filter === id);
     });
   }
 
+  function renderFilterButtons(){
+    filterRow.innerHTML = '';
+    filters.forEach(function(f){
+      var btn = document.createElement('div');
+      btn.className = 'filterbtn'; btn.dataset.filter = f.id;
+      btn.innerHTML = '<div class="fswatch" style="background:'+f.sw+'"></div>'+f.name;
+      btn.addEventListener('click', function(){
+        pushHistory('filter');
+        currentFilter = f.id;
+        setActiveFilterBtn(f.id);
+        document.getElementById('statusFilter').textContent = 'Filter: '+f.name;
+        render();
+      });
+      filterRow.appendChild(btn);
+    });
+    setActiveFilterBtn(currentFilter);
+  }
+
+  function loadCustomPresets(){
+    try{
+      var stored = localStorage.getItem('photo-editor-custom-filters');
+      if(stored){
+        JSON.parse(stored).forEach(function(preset){
+          if(preset && preset.id && preset.name){ filters.push(preset); }
+        });
+      }
+    }catch(e){}
+  }
+
+  function updateCustomBuilderLabels(){
+    if(!customFilterState) return;
+    document.getElementById('valCustomBrightness').textContent = customFilterState.brightness + '%';
+    document.getElementById('valCustomContrast').textContent = customFilterState.contrast + '%';
+    document.getElementById('valCustomSaturation').textContent = customFilterState.saturation + '%';
+    document.getElementById('valCustomSepia').textContent = customFilterState.sepia + '%';
+    document.getElementById('valCustomGrayscale').textContent = customFilterState.grayscale + '%';
+    document.getElementById('valCustomTint').textContent = customFilterState.tintStrength + '%';
+    document.getElementById('valCustomVignette').textContent = customFilterState.vignette + '%';
+    document.getElementById('valCustomGrain').textContent = customFilterState.grain + '%';
+    document.getElementById('valCustomBlur').textContent = customFilterState.blur + 'px';
+    if(customPreviewSwatch){
+      var tint = customFilterState.tintColor || '#ff8a3d';
+      customPreviewSwatch.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.22), rgba(0,0,0,0.2)), linear-gradient(135deg, ' + tint + ' 0%, #111 100%)';
+    }
+  }
+
+  function syncCustomBuilderUI(){
+    if(!customFilterState) customFilterState = getDefaultCustomFilterState();
+    if(customNameInput) customNameInput.value = customFilterState.name || 'My Filter';
+    document.getElementById('rngCustomBrightness').value = customFilterState.brightness;
+    document.getElementById('rngCustomContrast').value = customFilterState.contrast;
+    document.getElementById('rngCustomSaturation').value = customFilterState.saturation;
+    document.getElementById('rngCustomSepia').value = customFilterState.sepia;
+    document.getElementById('rngCustomGrayscale').value = customFilterState.grayscale;
+    document.getElementById('rngCustomTint').value = customFilterState.tintStrength;
+    document.getElementById('rngCustomVignette').value = customFilterState.vignette;
+    document.getElementById('rngCustomGrain').value = customFilterState.grain;
+    document.getElementById('rngCustomBlur').value = customFilterState.blur;
+    if(customTintColorInput) customTintColorInput.value = customFilterState.tintColor || '#ff8a3d';
+    if(customInvertCheckbox) customInvertCheckbox.checked = !!customFilterState.invert;
+    updateCustomBuilderLabels();
+  }
+
+  function readCustomBuilderState(){
+    if(!customFilterState) customFilterState = getDefaultCustomFilterState();
+    customFilterState.name = (customNameInput && customNameInput.value ? customNameInput.value : 'My Filter').trim();
+    customFilterState.brightness = parseInt(document.getElementById('rngCustomBrightness').value,10) || 100;
+    customFilterState.contrast = parseInt(document.getElementById('rngCustomContrast').value,10) || 100;
+    customFilterState.saturation = parseInt(document.getElementById('rngCustomSaturation').value,10) || 100;
+    customFilterState.sepia = parseInt(document.getElementById('rngCustomSepia').value,10) || 0;
+    customFilterState.grayscale = parseInt(document.getElementById('rngCustomGrayscale').value,10) || 0;
+    customFilterState.tintColor = (customTintColorInput && customTintColorInput.value) || '#ff8a3d';
+    customFilterState.tintStrength = parseInt(document.getElementById('rngCustomTint').value,10) || 0;
+    customFilterState.vignette = parseInt(document.getElementById('rngCustomVignette').value,10) || 0;
+    customFilterState.grain = parseInt(document.getElementById('rngCustomGrain').value,10) || 0;
+    customFilterState.blur = parseInt(document.getElementById('rngCustomBlur').value,10) || 0;
+    customFilterState.invert = !!(customInvertCheckbox && customInvertCheckbox.checked);
+    updateCustomBuilderLabels();
+    return customFilterState;
+  }
+
+  function previewCustomFilterFromBuilder(){
+    if(!hasImage()) return false;
+    readCustomBuilderState();
+    currentFilter = '__custom_preview__';
+    document.getElementById('statusFilter').textContent = 'Filter: ' + (customFilterState.name || 'My Filter');
+    render();
+    return true;
+  }
+
+  function openCustomFilterBuilder(){
+    if(!customFilterState) customFilterState = getDefaultCustomFilterState();
+    syncCustomBuilderUI();
+    customFilterOverlay.classList.add('open');
+    previewCustomFilterFromBuilder();
+  }
+  window.openCustomFilterBuilder = openCustomFilterBuilder;
+
+  function closeCustomFilterBuilder(){
+    customFilterOverlay.classList.remove('open');
+  }
+  window.closeCustomFilterBuilder = closeCustomFilterBuilder;
+
+  function applyCustomFilter(){
+    if(!hasImage()){ showMessageBox('Photo Editor.exe','Open a picture first.','!'); return; }
+    previewCustomFilterFromBuilder();
+    pushHistory('filter');
+    closeCustomFilterBuilder();
+    setStatus('Applied custom filter');
+  }
+  window.applyCustomFilter = applyCustomFilter;
+
+  function saveCustomFilter(){
+    if(!hasImage()){ showMessageBox('Photo Editor.exe','Open a picture first.','!'); return; }
+    readCustomBuilderState();
+    if(!customFilterState.name) customFilterState.name = 'My Filter';
+    customPresetCounter += 1;
+    var preset = {
+      id:'custom-' + Date.now() + '-' + customPresetCounter,
+      name: customFilterState.name,
+      b: customFilterState.brightness/100,
+      c: customFilterState.contrast/100,
+      s: customFilterState.saturation/100,
+      sepia: customFilterState.sepia/100,
+      gray: customFilterState.grayscale/100,
+      invert: customFilterState.invert ? 1 : 0,
+      fx:'custom',
+      custom: JSON.parse(JSON.stringify(customFilterState)),
+      sw:'linear-gradient(135deg,' + (customFilterState.tintColor || '#ff8a3d') + ', #111)'
+    };
+    filters.push(preset);
+    try{ localStorage.setItem('photo-editor-custom-filters', JSON.stringify(filters.filter(function(f){ return f.id && f.id.indexOf('custom-')===0; })) ); }catch(e){}
+    renderFilterButtons();
+    rebuildFilterDropdown();
+    currentFilter = preset.id;
+    setActiveFilterBtn(preset.id);
+    document.getElementById('statusFilter').textContent = 'Filter: ' + preset.name;
+    render();
+    closeCustomFilterBuilder();
+    setStatus('Saved custom filter preset');
+  }
+  window.saveCustomFilter = saveCustomFilter;
+
+  ['rngCustomBrightness','rngCustomContrast','rngCustomSaturation','rngCustomSepia','rngCustomGrayscale','rngCustomTint','rngCustomVignette','rngCustomGrain','rngCustomBlur','customNameInput','customTintColor','chkCustomInvert'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('input', function(){
+      readCustomBuilderState();
+      updateCustomBuilderLabels();
+      if(customFilterOverlay.classList.contains('open')){
+        previewCustomFilterFromBuilder();
+      }
+    });
+  });
+
+  loadCustomPresets();
+  renderFilterButtons();
+
   function getFilterDef(id){
     for(var i=0;i<filters.length;i++){ if(filters[i].id===id) return filters[i]; }
+    if(id === '__custom_preview__') return buildCustomFilterDef(customFilterState || getDefaultCustomFilterState());
     return filters[0];
   }
 
@@ -827,7 +1114,29 @@
     });
     mainCtx.putImageData(base,0,0);
 
-    switch(def.fx){
+    if(def.fx === 'custom' && def.custom){
+      if(def.custom.tintStrength > 0 && def.custom.tintColor){
+        drawTint(mainCtx,w,h,def.custom.tintColor, Math.max(0.01, def.custom.tintStrength/100), 'soft-light');
+      }
+      if(def.custom.vignette > 0){
+        drawVignette(mainCtx,w,h, Math.min(0.8, 0.22 + def.custom.vignette/100*0.45));
+      }
+      if(def.custom.grain > 0){
+        var grainId = mainCtx.getImageData(0,0,w,h);
+        addNoise(grainId, def.custom.grain * 0.35);
+        mainCtx.putImageData(grainId,0,0);
+      }
+      if(def.custom.blur > 0){
+        try{
+          var blurCanvas = document.createElement('canvas'); blurCanvas.width=w; blurCanvas.height=h;
+          var bctx = blurCanvas.getContext('2d');
+          bctx.filter = 'blur(' + def.custom.blur + 'px)';
+          bctx.drawImage(mainCanvas,0,0,w,h);
+          mainCtx.save(); mainCtx.globalAlpha = 0.8; mainCtx.drawImage(blurCanvas,0,0,w,h); mainCtx.restore();
+        }catch(e){}
+      }
+    } else {
+      switch(def.fx){
       case 'vhs':
         drawChromaShift(mainCtx, mainCanvas, w, h, Math.max(1,Math.round(w*0.004)));
         (function(){
@@ -1042,6 +1351,7 @@
         })();
         break;
       default: break;
+      }
     }
 
     document.getElementById('statusDims').textContent = w+' x '+h+' px';
@@ -1373,6 +1683,21 @@
 
   function hasImage(){ return !!sourceCanvas.width; }
 
+  function rebuildFilterDropdown(){
+    var ddFilters = document.getElementById('ddFilters');
+    ddFilters.innerHTML = '';
+    ddFilters.appendChild(ddItem('Make Your Own Filter...', function(){ openCustomFilterBuilder(); }));
+    ddFilters.appendChild(ddSep());
+    filters.forEach(function(f){
+      ddFilters.appendChild(ddItem(f.name, function(){
+        if(!hasImage()){ showMessageBox('Photo Editor.exe','Open a picture first.','!'); return; }
+        currentFilter = f.id; setActiveFilterBtn(f.id);
+        document.getElementById('statusFilter').textContent = 'Filter: '+f.name;
+        render();
+      }));
+    });
+  }
+
   function buildMenus(){
     var ddFile = document.getElementById('ddFile');
     ddFile.appendChild(ddItem('Open Picture...', function(){ fileInput.click(); }));
@@ -1405,15 +1730,7 @@
     ddView.appendChild(ddItem('Actual Size (100%)', function(){ zoomActual(); }));
     ddView.appendChild(ddItem('Fit to Window', function(){ zoomFit(); }));
 
-    var ddFilters = document.getElementById('ddFilters');
-    filters.forEach(function(f){
-      ddFilters.appendChild(ddItem(f.name, function(){
-        if(!hasImage()){ showMessageBox('Photo Editor.exe','Open a picture first.','!'); return; }
-        currentFilter = f.id; setActiveFilterBtn(f.id);
-        document.getElementById('statusFilter').textContent = 'Filter: '+f.name;
-        render();
-      }));
-    });
+    rebuildFilterDropdown();
 
     var ddHelp = document.getElementById('ddHelp');
     ddHelp.appendChild(ddItem('View Help Topics', function(){
