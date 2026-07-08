@@ -1363,22 +1363,51 @@
   // available width — height is never a constraint, and height:auto keeps
   // the aspect ratio exact (a 1:1 crop always displays as a real square).
   var zoomMode = 'fit'; // 'fit' or a numeric scale like 1, 1.25, 0.5
+  var fitResizeTimer = null;
+  var lastFitScale = 1;
+
   function fitCanvasDisplay(){
     var w = mainCanvas.width, h = mainCanvas.height;
     if(!w || !h) return;
+
     var scale;
     if(zoomMode === 'fit'){
       var area = document.getElementById('canvasArea');
-      var availW = Math.max(60, area.clientWidth - 32);
-      scale = Math.min(availW/w, 2.5);
-      scale = Math.max(0.05, scale);
+      var viewportWidth = (window.visualViewport && window.visualViewport.width) ? window.visualViewport.width : window.innerWidth;
+      var areaWidth = area ? Math.max(120, area.clientWidth - 24) : viewportWidth - 24;
+      var availW = Math.max(120, Math.min(viewportWidth - 24, areaWidth));
+      scale = Math.min(availW / w, 2.2);
+      scale = Math.max(0.18, scale);
+
+      if(lastFitScale > 0 && Math.abs(scale - lastFitScale) > 0.35){
+        scale = lastFitScale;
+      }
+      lastFitScale = scale;
     } else {
       scale = zoomMode;
+      lastFitScale = scale;
     }
+
     mainCanvas.style.width = Math.round(w*scale)+'px';
     mainCanvas.style.height = 'auto';
+    mainCanvas.style.maxWidth = '100%';
+    mainCanvas.style.display = 'block';
+    if(canvasWrap){
+      canvasWrap.style.maxWidth = '100%';
+      canvasWrap.style.width = 'auto';
+    }
   }
-  window.addEventListener('resize', function(){ if(zoomMode==='fit') fitCanvasDisplay(); });
+
+  function scheduleFitCanvasDisplay(){
+    if(fitResizeTimer) clearTimeout(fitResizeTimer);
+    fitResizeTimer = setTimeout(function(){
+      fitResizeTimer = null;
+      if(zoomMode === 'fit') fitCanvasDisplay();
+    }, 80);
+  }
+
+  window.addEventListener('resize', scheduleFitCanvasDisplay);
+  window.addEventListener('orientationchange', scheduleFitCanvasDisplay);
 
   // ---------------- Rotate / Reset ----------------
   function rotateImage(){
