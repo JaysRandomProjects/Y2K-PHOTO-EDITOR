@@ -548,19 +548,22 @@
     document.getElementById('trayclock').textContent = h+':'+m+' '+ampm;
   }
   function updateVisitCounter(){
-    try{
-      var key = 'photo-editor-visit-count';
-      var count = parseInt(localStorage.getItem(key), 10) || 0;
-      count += 1;
-      localStorage.setItem(key, String(count));
-      var el = document.getElementById('visitCount');
-      if(el){ el.textContent = count + ' visit' + (count === 1 ? '' : 's'); }
-      document.title = "Jay's Editor Studio";
-    }catch(e){
-      var el = document.getElementById('visitCount');
-      if(el){ el.textContent = '1 visit'; }
-      document.title = "Jay's Editor Studio";
-    }
+    var el = document.getElementById('visitCount');
+    if(el){ el.textContent = '…'; }
+
+    var endpoint = 'https://api.countapi.xyz/hit/jays-editor-studio/visits';
+    fetch(endpoint)
+      .then(function(res){ return res.ok ? res.json() : null; })
+      .then(function(data){
+        if(data && typeof data.value === 'number'){
+          if(el){ el.textContent = data.value; }
+        } else if(el){
+          el.textContent = '1';
+        }
+      })
+      .catch(function(){
+        if(el){ el.textContent = '1'; }
+      });
   }
   tickClock(); setInterval(tickClock,1000*15);
   updateVisitCounter();
